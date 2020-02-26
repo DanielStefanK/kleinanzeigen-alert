@@ -18,6 +18,7 @@ type Ad struct {
 
 func GetAds(page int, term string, cityCode int, radius int) []Ad {
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
+	fmt.Println(query)
 	ads := make([]Ad, 0, 0)
 
 	c := colly.NewCollector()

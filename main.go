@@ -21,7 +21,7 @@ var token string
 var mychatId int64
 
 func main() {
-	file, _ := os.Open("../configs/config.json")
+	file, _ := os.Open("./configs/config.json")
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 	config := Config{}
@@ -37,10 +37,10 @@ func main() {
 		log.Panic(err)
 	}
 
-	lastAds := scraper.GetAds(1, "nas server", 1932, 200)
+	lastAds := scraper.GetAds(1, "server", 1932, 20)
 
 	for true {
-		ads := scraper.GetAds(1, "nas server", 1932, 200)
+		ads := scraper.GetAds(1, "server", 1932, 20)
 		newlyAdded := findNew(ads, lastAds)
 		lastAds = append(ads[:0:0], ads...)
 
