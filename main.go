@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -21,16 +19,18 @@ var token string
 var mychatId int64
 
 func main() {
-	file, _ := os.Open("./configs/config.json")
-	defer file.Close()
-	decoder := json.NewDecoder(file)
-	config := Config{}
-	err := decoder.Decode(&config)
-	if err != nil {
-		log.Panic(err)
-	}
-	token = config.Token
-	mychatId = config.ChatId
+	// file, _ := os.Open("./configs/config.json")
+	// defer file.Close()
+	// decoder := json.NewDecoder(file)
+	// config := Config{}
+	// err := decoder.Decode(&config)
+	// if err != nil {
+	// 	log.Panic(err)
+	// }
+	// token = config.Token
+	// mychatId = config.ChatId
+	token = "changeme"
+	mychatId = 0
 
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {

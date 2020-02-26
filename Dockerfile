@@ -1,14 +1,8 @@
-FROM golang:alpine AS builder
+FROM golang:alpine
 RUN apk update && apk add --no-cache git
-WORKDIR $GOPATH/src/danielstefank/kleinanzeigen-alert/
-COPY . .
-RUN mkdir -p /configs
-COPY ./configs /configs
+ADD . /go/src/github.com/danielstefank/kleinanzeigen-alert/
+WORKDIR /go/src/github.com/danielstefank/kleinanzeigen-alert/
 RUN go get -d -v
+RUN go install github.com/danielstefank/kleinanzeigen-alert/
 
-RUN go build -o /go/bin/hello
-
-FROM scratch
-COPY --from=builder /go/bin/hello /go/bin/hello
-COPY --from=builder /configs /go/bin/configs
-ENTRYPOINT ["/go/bin/hello"]
+ENTRYPOINT ["/go/bin/kleinanzeigen-alert"]
