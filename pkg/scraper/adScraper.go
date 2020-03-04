@@ -1,13 +1,20 @@
 package scraper
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gocolly/colly"
 )
 
 const url = "https://www.ebay-kleinanzeigen.de/seite:%v/s-%s/k0l%vr%v"
+
+const cityUrl = "https://www.ebay-kleinanzeigen.de/s-ort-empfehlungen.json?query=%s"
 
 type Ad struct {
 	Title string
@@ -18,7 +25,6 @@ type Ad struct {
 
 func GetAds(page int, term string, cityCode int, radius int) []Ad {
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
-	fmt.Println(query)
 	ads := make([]Ad, 0, 0)
 
 	c := colly.NewCollector()
@@ -41,4 +47,56 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 
 	c.Wait()
 	return ads
+}
+
+func FindCityId(untrimmed string) (int, string) {
+	city := strings.Trim(untrimmed, " ")
+
+	spaceClient := http.Client{
+		Timeout: time.Second * 2,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf(cityUrl, city), nil)
+
+	if err != nil {
+		return 0, "could not make request"
+	}
+
+	res, getErr := spaceClient.Do(req)
+
+	if getErr != nil {
+		return 0, "could not send request"
+	}
+
+	body, readErr := ioutil.ReadAll(res.Body)
+
+	if readErr != nil {
+		return 0, "could not read response"
+	}
+
+	var cities map[string]string
+
+	unmarshalErr := json.Unmarshal(body, &cities)
+
+	if unmarshalErr != nil {
+		return 0, "could not parse json"
+	}
+
+	if len(cities) == 0 {
+		return 0, "could not find city"
+	}
+
+	for key, value := range cities {
+		cityIdString := []rune(key)
+
+		cityId, err := strconv.Atoi(strings.Trim(string(cityIdString[1:]), " "))
+
+		if err != nil {
+			return 0, "could not get cityId"
+		}
+
+		return cityId, value
+	}
+
+	return 0, "no city id found"
 }
