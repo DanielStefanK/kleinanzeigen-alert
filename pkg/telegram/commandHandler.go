@@ -138,7 +138,6 @@ func (b *Bot) sendQueries(chatId int64, queries []storage.Query) {
 	} else {
 		for _, q := range queries {
 			msg := tgbotapi.NewMessage(chatId, formatQuery(q))
-			msg.ReplyMarkup
 			b.internalBot.Send(msg)
 		}
 	}
