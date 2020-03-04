@@ -40,6 +40,15 @@ func (s *Storage) ListForChatId(chatId int64) []Query {
 	return foundQueries
 }
 
+func (s *Storage) findQueryById(id string) (int, *Query) {
+	for idx, q := range s.db {
+		if q.Id == id {
+			return idx, &q
+		}
+	}
+	return -1, nil
+}
+
 func (s *Storage) RemoveById(id string) *Query {
 	for idx, item := range s.db {
 		if item.Id == id {
@@ -76,15 +85,22 @@ func NewQuery(term string, city string, radius int, chatId int64) (*Query, strin
 	return q, ""
 }
 
-func (q *Query) getAds() []scraper.Ad {
-	return scraper.GetAds(1, q.Term, q.City, q.Radius)
-}
+func (s *Storage) GetLatest(id string) []scraper.Ad {
 
-func (q *Query) GetLatest() []scraper.Ad {
+	idx, q := s.findQueryById(id)
+
+	if q == nil {
+		return make([]scraper.Ad, 0, 0)
+	}
+
 	latest := q.getAds()
 	diff := findDiff(latest, q.LastAds)
-	q.LastAds = latest
+	s.db[idx].LastAds = latest
 	return diff
+}
+
+func (q Query) getAds() []scraper.Ad {
+	return scraper.GetAds(1, q.Term, q.City, q.Radius)
 }
 
 func findDiff(arr1 []scraper.Ad, arr2 []scraper.Ad) []scraper.Ad {

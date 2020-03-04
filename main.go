@@ -25,10 +25,11 @@ func main() {
 	go bot.Start()
 
 	for true {
+		log.Output(1, "Fetching ads")
 		for _, q := range s.GetQueries() {
 			go func(query storage.Query) {
-				latest := query.GetLatest()
-				bot.SendAds(query.ChatId, latest)
+				new := s.GetLatest(q.Id)
+				bot.SendAds(q.ChatId, new)
 			}(q)
 		}
 
