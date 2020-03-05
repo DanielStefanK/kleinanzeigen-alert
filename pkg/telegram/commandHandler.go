@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/danielstefank/kleinanzeigen-alert/pkg/model"
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/scraper"
 
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/storage"
@@ -14,12 +15,14 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
+// Bot will store the token the internal telegram bto and the storage
 type Bot struct {
 	token       string
 	internalBot *tgbotapi.BotAPI
 	storage     *storage.Storage
 }
 
+// CreateBot will create a new bot with the given token and storage
 func CreateBot(token string, storage *storage.Storage) *Bot {
 	bot := new(Bot)
 	bot.token = token
@@ -27,6 +30,7 @@ func CreateBot(token string, storage *storage.Storage) *Bot {
 	return bot
 }
 
+// Init will create the internal bot
 func (b *Bot) Init() {
 	bot, err := tgbotapi.NewBotAPI(b.token)
 
@@ -38,11 +42,12 @@ func (b *Bot) Init() {
 	}
 }
 
+// Start starts the bot and listens for commands this will not return
 func (b *Bot) Start() {
-	lastUpdateId := -1
+	lastUpdateID := -1
 
 	for {
-		u := tgbotapi.NewUpdate(lastUpdateId + 1)
+		u := tgbotapi.NewUpdate(lastUpdateID + 1)
 		u.Timeout = 60
 
 		updates, err := b.internalBot.GetUpdatesChan(u)
@@ -74,18 +79,17 @@ func (b *Bot) Start() {
 				b.internalBot.Send(msg)
 			case "list":
 				go func() {
-					queries := b.storage.ListForChatId(update.Message.Chat.ID)
+					queries := b.storage.ListForChatID(update.Message.Chat.ID)
 					b.sendQueries(update.Message.Chat.ID, queries)
 				}()
 			case "add":
 				go func() {
 					msg := "success"
-					q, success := getQueryFromArgs(update.Message.CommandArguments(), update.Message.Chat.ID)
+					q, success := getQueryFromArgs(update.Message.CommandArguments(), update.Message.Chat.ID, b.storage)
 
 					if !success {
 						msg = "use add like this '/add {SearchTerm}, {CityId}, {Radius}'"
 					} else {
-						b.storage.AddQuery(*q)
 						msg = fmt.Sprintf("Added query for %s", q.Term)
 					}
 
@@ -99,13 +103,19 @@ func (b *Bot) Start() {
 					if len(args) == 0 {
 						msg = "use remove like this '/remove {ID}"
 					} else {
-						removedQ := b.storage.RemoveById(strings.Trim(args, " "))
+						id, err := strconv.ParseUint(strings.Trim(args, " "), 10, 0)
 
-						if removedQ == nil {
-							msg = "Query not found"
+						if err != nil {
+							msg = "could not parse ID"
 						} else {
-							msg = fmt.Sprintf("Removed query for %s", removedQ.Term)
+							removedQ := b.storage.RemoveByID(uint(id))
+							if removedQ == nil {
+								msg = "Query not found"
+							} else {
+								msg = fmt.Sprintf("Removed query for %s", removedQ.Term)
+							}
 						}
+
 					}
 
 					b.internalBot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, msg))
@@ -119,37 +129,38 @@ func (b *Bot) Start() {
 				b.internalBot.Send(msg)
 			}
 
-			lastUpdateId = update.UpdateID
+			lastUpdateID = update.UpdateID
 		}
 	}
 }
 
-func (b *Bot) SendAds(chatId int64, ads []scraper.Ad) {
+// SendAds send the given ad the the given chatid
+func (b *Bot) SendAds(chatID int64, ads []scraper.Ad) {
 	for _, ad := range ads {
-		msg := tgbotapi.NewMessage(chatId, formatAd(ad))
+		msg := tgbotapi.NewMessage(chatID, formatAd(ad))
 		b.internalBot.Send(msg)
 	}
 }
 
-func (b *Bot) sendQueries(chatId int64, queries []storage.Query) {
+func (b *Bot) sendQueries(chatID int64, queries []model.Query) {
 	if len(queries) == 0 {
-		msg := tgbotapi.NewMessage(chatId, "No queries try adding one with /add")
+		msg := tgbotapi.NewMessage(chatID, "No queries try adding one with /add")
 		b.internalBot.Send(msg)
 	} else {
 		for _, q := range queries {
-			msg := tgbotapi.NewMessage(chatId, formatQuery(q))
+			msg := tgbotapi.NewMessage(chatID, formatQuery(q))
 			b.internalBot.Send(msg)
 		}
 	}
 }
 
-func formatQuery(q storage.Query) string {
+func formatQuery(q model.Query) string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("Term: %s\n", q.Term))
 	b.WriteString(f("Radius: %v\n", q.Radius))
 	b.WriteString(f("City: %v - %s\n", q.City, q.CityName))
-	b.WriteString(f("ID: %s", q.Id))
+	b.WriteString(f("ID: %v", q.ID))
 
 	return b.String()
 }
@@ -159,12 +170,13 @@ func formatAd(ad scraper.Ad) string {
 	f := fmt.Sprintf
 	b.WriteString(f("%s\n", ad.Title))
 	b.WriteString(f("%s\n", ad.Price))
+	b.WriteString(f("%s\n", ad.ID))
 	b.WriteString(f("%s", ad.Link))
 
 	return b.String()
 }
 
-func getQueryFromArgs(args string, chatId int64) (*storage.Query, bool) {
+func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Query, bool) {
 	arr := strings.SplitN(args, ",", -1)
 
 	if len(arr) != 3 {
@@ -180,11 +192,20 @@ func getQueryFromArgs(args string, chatId int64) (*storage.Query, bool) {
 		return nil, false
 	}
 
-	q, cityError := storage.NewQuery(term, city, radius, chatId)
+	q, cityError := s.AddNewQuery(term, city, radius, chatID)
 
 	if cityError != "" {
 		return nil, false
 	}
 
 	return q, true
+}
+
+func generateRoveBtn(id string) tgbotapi.ReplyKeyboardMarkup {
+	return tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton(fmt.Sprintf("/remove %s", id)),
+		),
+	)
+
 }

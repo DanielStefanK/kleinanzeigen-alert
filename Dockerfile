@@ -1,5 +1,5 @@
 FROM golang:alpine
-RUN apk update && apk add --no-cache git
+RUN apk update && apk add --no-cache git gcc musl-dev
 ADD . /go/src/github.com/danielstefank/kleinanzeigen-alert/
 WORKDIR /go/src/github.com/danielstefank/kleinanzeigen-alert/
 RUN go get -d -v

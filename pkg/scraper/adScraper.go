@@ -14,15 +14,17 @@ import (
 
 const url = "https://www.ebay-kleinanzeigen.de/seite:%v/s-%s/k0l%vr%v"
 
-const cityUrl = "https://www.ebay-kleinanzeigen.de/s-ort-empfehlungen.json?query=%s"
+const cityURL = "https://www.ebay-kleinanzeigen.de/s-ort-empfehlungen.json?query=%s"
 
+// Ad is a representation of the kleinanzeigen ads
 type Ad struct {
 	Title string
 	Link  string
 	Price string
-	Id    string
+	ID    string
 }
 
+// GetAds gets the ads for the specified page serachterm citycode and radius
 func GetAds(page int, term string, cityCode int, radius int) []Ad {
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
@@ -32,13 +34,13 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 	c.OnHTML(".ad-listitem", func(e *colly.HTMLElement) {
 		if !strings.Contains(e.DOM.Nodes[0].Attr[0].Val, "is-topad") {
 			link := e.DOM.Find("a[class=ellipsis]")
-			linkUrl, _ := link.Attr("href")
+			linkURL, _ := link.Attr("href")
 			price := e.DOM.Find("strong").Text()
 			id, idExsits := e.DOM.Find("article[class=aditem]").Attr("data-adid")
 			//details := e.DOM.Find("div[class=aditem-details]")
 			title := link.Text()
 			if idExsits {
-				ads = append(ads, Ad{Title: title, Link: "https://www.ebay-kleinanzeigen.de" + linkUrl, Id: id, Price: price})
+				ads = append(ads, Ad{Title: title, Link: "https://www.ebay-kleinanzeigen.de" + linkURL, ID: id, Price: price})
 			}
 		}
 	})
@@ -49,14 +51,15 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 	return ads
 }
 
-func FindCityId(untrimmed string) (int, string) {
+// FindCityID finds the city by the name/postal code
+func FindCityID(untrimmed string) (int, string) {
 	city := strings.Trim(untrimmed, " ")
 
 	spaceClient := http.Client{
 		Timeout: time.Second * 2,
 	}
 
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf(cityUrl, city), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf(cityURL, city), nil)
 
 	if err != nil {
 		return 0, "could not make request"
@@ -87,15 +90,15 @@ func FindCityId(untrimmed string) (int, string) {
 	}
 
 	for key, value := range cities {
-		cityIdString := []rune(key)
+		cityIDString := []rune(key)
 
-		cityId, err := strconv.Atoi(strings.Trim(string(cityIdString[1:]), " "))
+		cityID, err := strconv.Atoi(strings.Trim(string(cityIDString[1:]), " "))
 
 		if err != nil {
 			return 0, "could not get cityId"
 		}
 
-		return cityId, value
+		return cityID, value
 	}
 
 	return 0, "no city id found"

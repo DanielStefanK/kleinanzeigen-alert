@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/danielstefank/kleinanzeigen-alert/pkg/model"
+
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/storage"
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/telegram"
 )
@@ -20,16 +22,17 @@ func main() {
 	}
 
 	s := storage.NewStorage()
+	defer s.CloseDB()
 	bot := telegram.CreateBot(token, s)
 	bot.Init()
 	go bot.Start()
 
-	for true {
+	for {
 		log.Output(1, "Fetching ads")
 		for _, q := range s.GetQueries() {
-			go func(query storage.Query) {
-				new := s.GetLatest(q.Id)
-				bot.SendAds(q.ChatId, new)
+			go func(query model.Query) {
+				new := s.GetLatest(query.ID)
+				bot.SendAds(query.ChatID, new)
 			}(q)
 		}
 

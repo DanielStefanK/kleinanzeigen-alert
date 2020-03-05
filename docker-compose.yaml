@@ -5,3 +5,5 @@ services:
     environment:
       - TELEGRAM_APITOKEN=myToken
     restart: always
+    volumes:
+       - ./alert.db:/tmp/alert.db

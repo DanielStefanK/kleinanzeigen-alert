@@ -1,114 +1,120 @@
 package storage
 
 import (
+	"log"
+
+	"github.com/danielstefank/kleinanzeigen-alert/pkg/model"
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/scraper"
-	"github.com/rs/xid"
+	"github.com/jinzhu/gorm"
+
+	// import for the database driver
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
-type Query struct {
-	Id       string
-	ChatId   int64
-	LastAds  []scraper.Ad
-	Term     string
-	Radius   int
-	City     int
-	CityName string
-}
-
-//TODO: use actual db
+// Storage is the main storage medium
 type Storage struct {
-	db []Query
+	db *gorm.DB
 }
 
-func (s *Storage) AddQuery(query Query) {
-	s.db = append(s.db, query)
-}
-
-func (s *Storage) GetQueries() []Query {
-	return s.db
-}
-
-func (s *Storage) ListForChatId(chatId int64) []Query {
-	foundQueries := make([]Query, 0, 0)
-
-	for _, q := range s.db {
-		if q.ChatId == chatId {
-			foundQueries = append(foundQueries, q)
-		}
-	}
-
-	return foundQueries
-}
-
-func (s *Storage) findQueryById(id string) (int, *Query) {
-	for idx, q := range s.db {
-		if q.Id == id {
-			return idx, &q
-		}
-	}
-	return -1, nil
-}
-
-func (s *Storage) RemoveById(id string) *Query {
-	for idx, item := range s.db {
-		if item.Id == id {
-			s.db = append(s.db[:idx], s.db[idx+1:]...)
-			return &item
-		}
-	}
-
-	return nil
-}
-
+// NewStorage creates a new Storage
 func NewStorage() *Storage {
 	s := new(Storage)
-	s.db = make([]Query, 0, 0)
+	db, err := gorm.Open("sqlite3", "/tmp/alert.db")
 
+	if err != nil {
+		log.Panic(err.Error())
+	}
+
+	db.AutoMigrate(&model.Query{})
+	db.AutoMigrate(&model.Ad{})
+
+	s.db = db
 	return s
 }
 
-func NewQuery(term string, city string, radius int, chatId int64) (*Query, string) {
-	cityId, cityName := scraper.FindCityId(city)
+//CloseDB closes the created tb connection
+func (s *Storage) CloseDB() {
+	s.db.Close()
+}
 
-	if cityId == 0 {
+// AddNewQuery adds a new query to the db
+func (s *Storage) AddNewQuery(term string, city string, radius int, chatID int64) (*model.Query, string) {
+	cityID, cityName := scraper.FindCityID(city)
+	if cityID == 0 {
 		return nil, "could not find cityid"
 	}
 
-	q := new(Query)
-	q.Id = xid.New().String()
-	q.LastAds = scraper.GetAds(1, term, cityId, radius)
-	q.ChatId = chatId
-	q.CityName = cityName
-	q.Term = term
-	q.City = cityId
-	q.Radius = radius
-	return q, ""
+	query := model.Query{ChatID: chatID, Term: term, Radius: radius, City: cityID, CityName: cityName}
+
+	s.db.NewRecord(query)
+	s.db.Create(&query)
+
+	latestAds := scraper.GetAds(1, term, cityID, radius)
+	s.storeLatestAds(latestAds, query.ID)
+
+	return &query, ""
 }
 
-func (s *Storage) GetLatest(id string) []scraper.Ad {
+// GetQueries gets all the queries from the db
+func (s *Storage) GetQueries() []model.Query {
+	queries := make([]model.Query, 0, 0)
+	s.db.Find(&queries)
 
-	idx, q := s.findQueryById(id)
+	return queries
+}
+
+// ListForChatID gets all the queries for specified chatId
+func (s *Storage) ListForChatID(chatID int64) []model.Query {
+	queries := make([]model.Query, 0, 0)
+	s.db.Where(&model.Query{ChatID: chatID}).Find(&queries)
+	return queries
+}
+
+// FindQueryByID fidn a query by the given id
+func (s *Storage) FindQueryByID(id uint) *model.Query {
+	q := model.Query{}
+	s.db.Preload("LastAds").Where("id = ?", id).First(&q)
+	return &q
+}
+
+// RemoveByID removes a query by id
+func (s *Storage) RemoveByID(id uint) *model.Query {
+	q := s.FindQueryByID(id)
+	s.db.Delete(q)
+
+	return q
+}
+
+//GetLatest fetches the latest ads from kleinanzeigen. All ads where the id is not in the db is returned and the db is updated with the latest ads
+func (s *Storage) GetLatest(id uint) []scraper.Ad {
+	q := s.FindQueryByID(id)
 
 	if q == nil {
 		return make([]scraper.Ad, 0, 0)
 	}
 
-	latest := q.getAds()
+	latest := scraper.GetAds(1, q.Term, q.City, q.Radius)
 	diff := findDiff(latest, q.LastAds)
-	s.db[idx].LastAds = latest
+
+	s.db.Where("query_id = ?", q.ID).Delete(model.Ad{})
+	s.storeLatestAds(latest, q.ID)
 	return diff
 }
 
-func (q Query) getAds() []scraper.Ad {
-	return scraper.GetAds(1, q.Term, q.City, q.Radius)
+func (s *Storage) storeLatestAds(ads []scraper.Ad, qID uint) {
+	for _, item := range ads {
+		ad := model.Ad{EbayID: item.ID, QueryID: qID}
+		s.db.NewRecord(&ad)
+		s.db.Create(&ad)
+	}
 }
 
-func findDiff(arr1 []scraper.Ad, arr2 []scraper.Ad) []scraper.Ad {
+func findDiff(current []scraper.Ad, last []model.Ad) []scraper.Ad {
 	newAds := make([]scraper.Ad, 0, 0)
-	for _, s1 := range arr1 {
+	for _, s1 := range current {
 		found := false
-		for _, s2 := range arr2 {
-			if s1.Id == s2.Id {
+		for _, s2 := range last {
+			if s1.ID == s2.EbayID {
 				found = true
 				break
 			}
