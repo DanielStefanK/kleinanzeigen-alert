@@ -108,7 +108,7 @@ func (b *Bot) Start() {
 						if err != nil {
 							msg = "could not parse ID"
 						} else {
-							removedQ := b.storage.RemoveByID(uint(id))
+							removedQ := b.storage.RemoveByID(uint(id), update.Message.Chat.ID)
 							if removedQ == nil {
 								msg = "Query not found"
 							} else {

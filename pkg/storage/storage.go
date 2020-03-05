@@ -78,8 +78,13 @@ func (s *Storage) FindQueryByID(id uint) *model.Query {
 }
 
 // RemoveByID removes a query by id
-func (s *Storage) RemoveByID(id uint) *model.Query {
+func (s *Storage) RemoveByID(id uint, chatID int64) *model.Query {
 	q := s.FindQueryByID(id)
+
+	if q.ChatID != chatID {
+		return nil
+	}
+
 	s.db.Delete(q)
 
 	return q
