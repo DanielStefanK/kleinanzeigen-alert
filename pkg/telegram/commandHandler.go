@@ -68,15 +68,11 @@ func (b *Bot) Start() {
 				log.Printf("Got msg: %s\n", update.Message.Text)
 			}
 
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
-
 			switch update.Message.Command() {
 			case "start":
-				msg.Text = "type '/list', '/add {SearchTerm}, {CityId}, {Radius}' or /remove {ID}."
-				b.internalBot.Send(msg)
+				b.sendMsg(generateHelpText(), update.Message.Chat.ID)
 			case "help":
-				msg.Text = "type '/list', '/add {SearchTerm}, {CityId}, {Radius}' or /remove {ID}."
-				b.internalBot.Send(msg)
+				b.sendMsg(generateHelpText(), update.Message.Chat.ID)
 			case "list":
 				go func() {
 					queries := b.storage.ListForChatID(update.Message.Chat.ID)
@@ -88,12 +84,12 @@ func (b *Bot) Start() {
 					q, success := getQueryFromArgs(update.Message.CommandArguments(), update.Message.Chat.ID, b.storage)
 
 					if !success {
-						msg = "use add like this '/add {SearchTerm}, {CityId}, {Radius}'"
+						msg = "Um eine Suche hinzuzufpgen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}</code>"
 					} else {
-						msg = fmt.Sprintf("Added query for %s", q.Term)
+						msg = fmt.Sprintf("Suche für <b>%s</b> in <b>%s</b> hinzugefügt.", q.Term, q.CityName)
 					}
 
-					b.internalBot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, msg))
+					b.sendMsg(msg, update.Message.Chat.ID)
 				}()
 			case "remove":
 				go func() {
@@ -101,32 +97,31 @@ func (b *Bot) Start() {
 					args := update.Message.CommandArguments()
 
 					if len(args) == 0 {
-						msg = "use remove like this '/remove {ID}"
+						msg = "Um zu entfernen schreibe <code>/remove {ID}</code>. Die ID bekommst du vom <code>/list</code> Befehl."
 					} else {
 						id, err := strconv.ParseUint(strings.Trim(args, " "), 10, 0)
 
 						if err != nil {
-							msg = "could not parse ID"
+							msg = "Konnte ID nicht lesen. Diese sollte eine ganze positive Zahl sein."
 						} else {
 							removedQ := b.storage.RemoveByID(uint(id), update.Message.Chat.ID)
 							if removedQ == nil {
-								msg = "Query not found"
+								msg = "Suche nicht gefunden."
 							} else {
-								msg = fmt.Sprintf("Removed query for %s", removedQ.Term)
+								msg = fmt.Sprintf("Suche für %s entfernt", removedQ.Term)
 							}
 						}
 
 					}
 
-					b.internalBot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, msg))
+					b.sendMsg(msg, update.Message.Chat.ID)
 				}()
 			case "clear":
 				go func() {
-					b.internalBot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "coming soon"))
+					b.sendMsg("kommt bald.", update.Message.Chat.ID)
 				}()
 			default:
-				msg.Text = "I don't know that command"
-				b.internalBot.Send(msg)
+				b.sendMsg("Das Kommando kenne ich nicht.", update.Message.Chat.ID)
 			}
 
 			lastUpdateID = update.UpdateID
@@ -137,30 +132,39 @@ func (b *Bot) Start() {
 // SendAds send the given ad the the given chatid
 func (b *Bot) SendAds(chatID int64, ads []scraper.Ad) {
 	for _, ad := range ads {
-		msg := tgbotapi.NewMessage(chatID, formatAd(ad))
-		b.internalBot.Send(msg)
+		b.sendMsg(formatAd(ad), chatID)
 	}
 }
 
 func (b *Bot) sendQueries(chatID int64, queries []model.Query) {
 	if len(queries) == 0 {
-		msg := tgbotapi.NewMessage(chatID, "No queries try adding one with /add")
-		b.internalBot.Send(msg)
+		b.sendMsg("Keine Suchen gefunden. Füge ein mit <code>/add</code> hinzu.", chatID)
 	} else {
 		for _, q := range queries {
-			msg := tgbotapi.NewMessage(chatID, formatQuery(q))
-			b.internalBot.Send(msg)
+			b.sendMsg(formatQuery(q), chatID)
 		}
+	}
+}
+
+func (b *Bot) sendMsg(msg string, chatID int64) {
+	telegramMessage := tgbotapi.NewMessage(chatID, msg)
+	telegramMessage.ParseMode = tgbotapi.ModeHTML
+
+	_, err := b.internalBot.Send(telegramMessage)
+
+	if err != nil {
+		log.Output(1, "could not send msg")
+		log.Output(1, err.Error())
 	}
 }
 
 func formatQuery(q model.Query) string {
 	var b strings.Builder
 	f := fmt.Sprintf
-	b.WriteString(f("Term: %s\n", q.Term))
-	b.WriteString(f("Radius: %v\n", q.Radius))
-	b.WriteString(f("City: %v - %s\n", q.City, q.CityName))
-	b.WriteString(f("ID: %v", q.ID))
+	b.WriteString(f("Suchbegriff: <b>%s</b>\n", q.Term))
+	b.WriteString(f("Radius: <b>%v km</b>\n", q.Radius))
+	b.WriteString(f("Stadt: <b>%s</b>\n", q.CityName))
+	b.WriteString(f("ID: <b>%v</b>", q.ID))
 
 	return b.String()
 }
@@ -168,10 +172,8 @@ func formatQuery(q model.Query) string {
 func formatAd(ad scraper.Ad) string {
 	var b strings.Builder
 	f := fmt.Sprintf
-	b.WriteString(f("%s\n", ad.Title))
-	b.WriteString(f("%s\n", ad.Price))
-	b.WriteString(f("%s\n", ad.ID))
-	b.WriteString(f("%s", ad.Link))
+	b.WriteString(f("<b>%s</b> - %s\n", ad.Title, ad.Price))
+	b.WriteString(f("<a href=\"%s\">hier</a>", ad.Link))
 
 	return b.String()
 }
@@ -201,11 +203,23 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 	return q, true
 }
 
-func generateRoveBtn(id string) tgbotapi.ReplyKeyboardMarkup {
-	return tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton(fmt.Sprintf("/remove %s", id)),
-		),
-	)
+func generateHelpText() string {
+	var b strings.Builder
+	f := fmt.Sprintf
+	b.WriteString(f("<u>Hinzufügen von Suchen</u>\n"))
+	b.WriteString(f("schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}</code>\n"))
+	b.WriteString(f("z.B. <code>/add Fahrrad, Köln, 20</code>\n"))
+	b.WriteString(f("Dies führt jede minute eine Suche aus und du kommst die neuesten Einträge hier.\n"))
 
+	b.WriteString(f("\n"))
+	b.WriteString(f("<u>Listen von alles Suchen</u>\n"))
+	b.WriteString(f("schreibe <code>/list</code>/\n"))
+	b.WriteString(f("Dies listet alle deine aktuellen Suchen\n"))
+
+	b.WriteString(f("\n"))
+	b.WriteString(f("<u>Entfernen von Suchen</u>\n"))
+	b.WriteString(f("schreibe <code>/remove {ID}</code>\n"))
+	b.WriteString(f("Die ID erhälst du aus dem List Befehl. Dies Löscht die Suche und du erhälst für sie keine Nachrichten mehr.\n"))
+
+	return b.String()
 }
