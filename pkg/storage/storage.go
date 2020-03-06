@@ -2,6 +2,7 @@ package storage
 
 import (
 	"log"
+	"time"
 
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/model"
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/scraper"
@@ -73,7 +74,7 @@ func (s *Storage) ListForChatID(chatID int64) []model.Query {
 // FindQueryByID fidn a query by the given id
 func (s *Storage) FindQueryByID(id uint) *model.Query {
 	q := model.Query{}
-	s.db.Preload("LastAds").Where("id = ?", id).First(&q)
+	s.db.Where("id = ?", id).First(&q)
 	return &q
 }
 
@@ -99,11 +100,15 @@ func (s *Storage) GetLatest(id uint) []scraper.Ad {
 	}
 
 	latest := scraper.GetAds(1, q.Term, q.City, q.Radius)
-	diff := findDiff(latest, q.LastAds)
+	diff := s.findDiff(latest, q.ID)
 
-	s.db.Where("query_id = ?", q.ID).Delete(model.Ad{})
-	s.storeLatestAds(latest, q.ID)
+	s.storeLatestAds(diff, q.ID)
 	return diff
+}
+
+// DeleteOlderAds deletes all ads older that 7 days
+func (s *Storage) DeleteOlderAds() {
+	s.db.Where("created_at < ?", time.Now().AddDate(0, 0, -7)).Delete(model.Ad{})
 }
 
 func (s *Storage) storeLatestAds(ads []scraper.Ad, qID uint) {
@@ -114,17 +119,12 @@ func (s *Storage) storeLatestAds(ads []scraper.Ad, qID uint) {
 	}
 }
 
-func findDiff(current []scraper.Ad, last []model.Ad) []scraper.Ad {
+func (s *Storage) findDiff(current []scraper.Ad, qID uint) []scraper.Ad {
 	newAds := make([]scraper.Ad, 0, 0)
 	for _, s1 := range current {
-		found := false
-		for _, s2 := range last {
-			if s1.ID == s2.EbayID {
-				found = true
-				break
-			}
-		}
-		if !found {
+		q := model.Ad{}
+		s.db.Where("query_id = ? AND ebay_id = ?", qID, s1.ID).First(&q)
+		if q.EbayID == "" {
 			newAds = append(newAds, s1)
 		}
 	}

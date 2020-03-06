@@ -27,6 +27,16 @@ func main() {
 	bot.Init()
 	go bot.Start()
 
+	cleanupTicker := time.NewTicker(time.Hour)
+
+	go func() {
+		for {
+			<-cleanupTicker.C
+			log.Output(1, "Cleaning up old ads")
+			s.DeleteOlderAds()
+		}
+	}()
+
 	for {
 		log.Output(1, "Fetching ads")
 		for _, q := range s.GetQueries() {
@@ -36,6 +46,6 @@ func main() {
 			}(q)
 		}
 
-		time.Sleep(time.Minute)
+		time.Sleep(time.Minute * 1)
 	}
 }
