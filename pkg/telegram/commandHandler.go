@@ -213,7 +213,7 @@ func generateHelpText() string {
 
 	b.WriteString(f("\n"))
 	b.WriteString(f("<u>Listen von alles Suchen</u>\n"))
-	b.WriteString(f("schreibe <code>/list</code>/\n"))
+	b.WriteString(f("schreibe <code>/list</code>\n"))
 	b.WriteString(f("Dies listet alle deine aktuellen Suchen\n"))
 
 	b.WriteString(f("\n"))
