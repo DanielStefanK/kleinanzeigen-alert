@@ -61,6 +61,10 @@ func FindCityID(untrimmed string) (int, string) {
 
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf(cityURL, city), nil)
 
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:74.0) Gecko/20100101 Firefox/74.0")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
+
 	if err != nil {
 		return 0, "could not make request"
 	}

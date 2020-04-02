@@ -42,6 +42,7 @@ func (s *Storage) CloseDB() {
 func (s *Storage) AddNewQuery(term string, city string, radius int, chatID int64) (*model.Query, string) {
 	cityID, cityName := scraper.FindCityID(city)
 	if cityID == 0 {
+		log.Println(cityName)
 		return nil, "could not find cityid"
 	}
 

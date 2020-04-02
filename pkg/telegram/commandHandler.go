@@ -197,6 +197,7 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 	q, cityError := s.AddNewQuery(term, city, radius, chatID)
 
 	if cityError != "" {
+		log.Println(cityError)
 		return nil, false
 	}
 
