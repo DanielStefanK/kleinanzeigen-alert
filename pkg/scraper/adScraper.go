@@ -36,7 +36,7 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 			if !strings.Contains(e.DOM.Nodes[0].Attr[0].Val, "is-topad") {
 				link := e.DOM.Find("a[class=ellipsis]")
 				linkURL, _ := link.Attr("href")
-				price := e.DOM.Find("strong").Text()
+				price := strings.TrimSpace(e.DOM.Find("p[class=aditem-main--middle--price]").Text())
 				id, idExsits := e.DOM.Find("article[class=aditem]").Attr("data-adid")
 				//details := e.DOM.Find("div[class=aditem-details]")
 				title := link.Text()
