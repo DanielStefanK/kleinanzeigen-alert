@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,7 +35,6 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 
 	c.OnHTML(".ad-listitem", func(e *colly.HTMLElement) {
 		if !strings.Contains(e.DOM.Nodes[0].Attr[0].Val, "is-topad") {
-			log.Output(1, "found an valid ad item")
 			link := e.DOM.Find("a[class=ellipsis]")
 			linkURL, _ := link.Attr("href")
 			price := e.DOM.Find("strong").Text()
