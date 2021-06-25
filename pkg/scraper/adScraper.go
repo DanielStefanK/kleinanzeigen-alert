@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,10 +30,13 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
 
+	noneFound := false
+
 	c := colly.NewCollector()
 
 	c.OnHTML(".ad-listitem", func(e *colly.HTMLElement) {
 		if !strings.Contains(e.DOM.Nodes[0].Attr[0].Val, "is-topad") {
+			log.Output(1, "found an valid ad item")
 			link := e.DOM.Find("a[class=ellipsis]")
 			linkURL, _ := link.Attr("href")
 			price := e.DOM.Find("strong").Text()
@@ -45,9 +49,18 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 		}
 	})
 
+	// if there is a warning with for this search ignore fetched ads
+	c.OnHTML(".outcomemessage-warning", func(e *colly.HTMLElement) {
+		noneFound = true
+	})
+
 	c.Visit(query)
 
 	c.Wait()
+
+	if noneFound {
+		return make([]Ad, 0, 0)
+	}
 	return ads
 }
 
