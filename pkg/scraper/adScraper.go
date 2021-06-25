@@ -29,36 +29,27 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
 
-	noneFound := false
-
 	c := colly.NewCollector()
 
-	c.OnHTML(".ad-listitem", func(e *colly.HTMLElement) {
-		if !strings.Contains(e.DOM.Nodes[0].Attr[0].Val, "is-topad") {
-			link := e.DOM.Find("a[class=ellipsis]")
-			linkURL, _ := link.Attr("href")
-			price := e.DOM.Find("strong").Text()
-			id, idExsits := e.DOM.Find("article[class=aditem]").Attr("data-adid")
-			//details := e.DOM.Find("div[class=aditem-details]")
-			title := link.Text()
-			if idExsits {
-				ads = append(ads, Ad{Title: title, Link: "https://www.ebay-kleinanzeigen.de" + linkURL, ID: id, Price: price})
+	c.OnHTML("#srchrslt-adtable", func(adListEl *colly.HTMLElement) {
+		adListEl.ForEach(".ad-listitem", func(_ int, e *colly.HTMLElement) {
+			if !strings.Contains(e.DOM.Nodes[0].Attr[0].Val, "is-topad") {
+				link := e.DOM.Find("a[class=ellipsis]")
+				linkURL, _ := link.Attr("href")
+				price := e.DOM.Find("strong").Text()
+				id, idExsits := e.DOM.Find("article[class=aditem]").Attr("data-adid")
+				//details := e.DOM.Find("div[class=aditem-details]")
+				title := link.Text()
+				if idExsits {
+					ads = append(ads, Ad{Title: title, Link: "https://www.ebay-kleinanzeigen.de" + linkURL, ID: id, Price: price})
+				}
 			}
-		}
-	})
-
-	// if there is a warning with for this search ignore fetched ads
-	c.OnHTML(".outcomemessage-warning", func(e *colly.HTMLElement) {
-		noneFound = true
+		})
 	})
 
 	c.Visit(query)
 
 	c.Wait()
-
-	if noneFound {
-		return make([]Ad, 0, 0)
-	}
 	return ads
 }
 
