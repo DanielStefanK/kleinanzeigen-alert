@@ -29,6 +29,8 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
 
+	noneFound := false
+
 	c := colly.NewCollector()
 
 	c.OnHTML(".ad-listitem", func(e *colly.HTMLElement) {
@@ -45,9 +47,18 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 		}
 	})
 
+	// if there is a warning with for this search ignore fetched ads
+	c.OnHTML(".outcomemessage-warning", func(e *colly.HTMLElement) {
+		noneFound = true
+	})
+
 	c.Visit(query)
 
 	c.Wait()
+
+	if noneFound {
+		return make([]Ad, 0, 0)
+	}
 	return ads
 }
 
