@@ -1,9 +1,7 @@
 version: '3'
 services:
   kleinanzeigen:
-    image: docker.pkg.github.com/danielstefank/kleinanzeigen-alert/main:latest
+    build: .
     environment:
       - TELEGRAM_APITOKEN=myToken
     restart: always
-    volumes:
-       - ./alert.db:/tmp/alert.db
