@@ -2,10 +2,11 @@ package telegram
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/model"
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/scraper"
@@ -37,7 +38,7 @@ func (b *Bot) Init() {
 	b.internalBot = bot
 
 	if err != nil {
-		log.Panic("could not initalize bot")
+		log.Panic().Err(err).Msg("could not initialize bot")
 		os.Exit(1)
 	}
 }
@@ -53,7 +54,7 @@ func (b *Bot) Start() {
 		updates, err := b.internalBot.GetUpdatesChan(u)
 
 		if err != nil {
-			log.Println("could not get latetst update")
+			log.Error().Err(err).Msg("could not get latetst message updates for telegram bot")
 			continue
 		}
 
@@ -62,14 +63,14 @@ func (b *Bot) Start() {
 				continue
 			}
 
-			log.Printf("Got msg: %s\n", update.Message.Text)
-
-			if !update.Message.IsCommand() {
-				log.Printf("Got msg: %s\n", update.Message.Text)
-			}
+			log.Debug().
+				Str("telegram_msg", update.Message.Text).
+				Str("telegram_username", update.Message.Chat.UserName).
+				Msg("Got new message")
 
 			switch update.Message.Command() {
 			case "start":
+				log.Debug().Str("telegram_username", update.Message.Chat.UserName).Msg("Starting bot.")
 				b.sendMsg(generateHelpText(), update.Message.Chat.ID)
 			case "help":
 				b.sendMsg(generateHelpText(), update.Message.Chat.ID)
@@ -84,9 +85,15 @@ func (b *Bot) Start() {
 					q, success := getQueryFromArgs(update.Message.CommandArguments(), update.Message.Chat.ID, b.storage)
 
 					if !success {
-						msg = "Um eine Suche hinzuzufpgen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}</code>"
+						msg = "Um eine Suche hinzuzufügen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}</code>"
 					} else {
-						msg = fmt.Sprintf("Suche für <b>%s</b> in <b>%s</b> hinzugefügt.", q.Term, q.CityName)
+						msg = fmt.Sprintf("Suche für <b>%s</b> in <b>%s</b> hinzugefügt. ID: <b>%d</b>", q.Term, q.CityName, q.ID)
+						log.Debug().
+							Str("telegram_username", update.Message.Chat.UserName).
+							Str("term", q.Term).
+							Str("city", q.CityName).
+							Int("radius", q.Radius).
+							Msg("added new query.")
 					}
 
 					b.sendMsg(msg, update.Message.Chat.ID)
@@ -109,6 +116,12 @@ func (b *Bot) Start() {
 								msg = "Suche nicht gefunden."
 							} else {
 								msg = fmt.Sprintf("Suche für %s entfernt", removedQ.Term)
+								log.Debug().
+									Str("telegram_username", update.Message.Chat.UserName).
+									Str("term", removedQ.Term).
+									Str("city", removedQ.CityName).
+									Int("radius", removedQ.Radius).
+									Msg("query removed")
 							}
 						}
 
@@ -129,7 +142,7 @@ func (b *Bot) Start() {
 	}
 }
 
-// SendAds send the given ad the the given chatid
+// SendAds send the given ad the the given chatId
 func (b *Bot) SendAds(chatID int64, ads []scraper.Ad) {
 	for _, ad := range ads {
 		b.sendMsg(formatAd(ad), chatID)
@@ -153,8 +166,7 @@ func (b *Bot) sendMsg(msg string, chatID int64) {
 	_, err := b.internalBot.Send(telegramMessage)
 
 	if err != nil {
-		log.Output(1, "could not send msg")
-		log.Output(1, err.Error())
+		log.Error().Err(err).Msg("could not send telegram message")
 	}
 }
 
@@ -194,10 +206,15 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 		return nil, false
 	}
 
-	q, cityError := s.AddNewQuery(term, city, radius, chatID)
+	q, err := s.AddNewQuery(term, city, radius, chatID)
 
-	if cityError != "" {
-		log.Println(cityError)
+	if err != nil {
+		log.Warn().Err(err).
+			Str("term", q.Term).
+			Str("city", q.CityName).
+			Int("radius", q.Radius).
+			Msg("could not create query")
+
 		return nil, false
 	}
 
@@ -220,7 +237,7 @@ func generateHelpText() string {
 	b.WriteString(f("\n"))
 	b.WriteString(f("<u>Entfernen von Suchen</u>\n"))
 	b.WriteString(f("schreibe <code>/remove {ID}</code>\n"))
-	b.WriteString(f("Die ID erhälst du aus dem List Befehl. Dies Löscht die Suche und du erhälst für sie keine Nachrichten mehr.\n"))
+	b.WriteString(f("Die ID erhältst du aus dem List Befehl. Dies Löscht die Suche und du erhältst für sie keine Nachrichten mehr.\n"))
 
 	return b.String()
 }

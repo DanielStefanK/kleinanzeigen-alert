@@ -1,9 +1,12 @@
 package main
 
 import (
-	"log"
+	"flag"
 	"os"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/model"
 
@@ -13,11 +16,25 @@ import (
 
 var token string
 
+const fetchDuration = time.Second * 15
+
 func main() {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	debug := flag.Bool("debug", false, "sets log level to debug")
+
+	flag.Parse()
+
+	// Default level for this example is info, unless debug flag is present
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	if *debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+
 	token = os.Getenv("TELEGRAM_APITOKEN")
 
 	if token == "" {
-		log.Panic("could read API token")
+		log.Panic().Msg("could read API token")
 		os.Exit(1)
 	}
 
@@ -32,20 +49,30 @@ func main() {
 	go func() {
 		for {
 			<-cleanupTicker.C
-			log.Output(1, "Cleaning up old ads")
-			s.DeleteOlderAds()
+			log.Info().Msg("Removing old ads.")
+			deleted, err := s.DeleteOlderAds()
+
+			if err != nil {
+				log.Error().Err(err).Msg("could not delete old ads")
+				return
+			}
+
+			log.Info().Int64("affected_ads", deleted).Msg("Old ads removed. Sleeping for 1 hour.")
 		}
 	}()
 
 	for {
-		log.Output(1, "Fetching ads")
-		for _, q := range s.GetQueries() {
+		queries := s.GetQueries()
+
+		log.Info().Int("number_of_queries", len(queries)).Msg("fetching ads")
+		for _, q := range queries {
 			go func(query model.Query) {
 				new := s.GetLatest(query.ID)
+				log.Debug().Int("number_of_new_ads", len(new)).Msg("new ads found")
 				bot.SendAds(query.ChatID, new)
 			}(q)
 		}
 
-		time.Sleep(time.Minute * 1)
+		time.Sleep(fetchDuration)
 	}
 }

@@ -2,12 +2,15 @@ package scraper
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/gocolly/colly"
 )
@@ -26,6 +29,7 @@ type Ad struct {
 
 // GetAds gets the ads for the specified page serachterm citycode and radius
 func GetAds(page int, term string, cityCode int, radius int) []Ad {
+	log.Debug().Msg("scraping for ads")
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
 
@@ -50,11 +54,16 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 	c.Visit(query)
 
 	c.Wait()
+
+	log.Debug().Str("query", term).Int("number_of_queries", len(ads)).Msg("scraped ads for query")
+
 	return ads
 }
 
 // FindCityID finds the city by the name/postal code
-func FindCityID(untrimmed string) (int, string) {
+func FindCityID(untrimmed string) (int, string, error) {
+	log.Debug().Str("city_search_term", untrimmed).Msg("finding city id")
+
 	city := strings.Trim(untrimmed, " ")
 
 	spaceClient := http.Client{
@@ -68,19 +77,19 @@ func FindCityID(untrimmed string) (int, string) {
 	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
 
 	if err != nil {
-		return 0, "could not make request"
+		return 0, "", errors.New("could not make request")
 	}
 
 	res, getErr := spaceClient.Do(req)
 
 	if getErr != nil {
-		return 0, "could not send request"
+		return 0, "", errors.New("could not send request")
 	}
 
 	body, readErr := ioutil.ReadAll(res.Body)
 
 	if readErr != nil {
-		return 0, "could not read response"
+		return 0, "", errors.New("could not read response")
 	}
 
 	var cities map[string]string
@@ -88,11 +97,11 @@ func FindCityID(untrimmed string) (int, string) {
 	unmarshalErr := json.Unmarshal(body, &cities)
 
 	if unmarshalErr != nil {
-		return 0, "could not parse json"
+		return 0, "", errors.New("could not parse json")
 	}
 
 	if len(cities) == 0 {
-		return 0, "could not find city"
+		return 0, "", errors.New("could not find city")
 	}
 
 	for key, value := range cities {
@@ -101,11 +110,13 @@ func FindCityID(untrimmed string) (int, string) {
 		cityID, err := strconv.Atoi(strings.Trim(string(cityIDString[1:]), " "))
 
 		if err != nil {
-			return 0, "could not get cityId"
+			return 0, "", errors.New("could not get cityId")
 		}
 
-		return cityID, value
+		log.Debug().Int("city_id", cityID).Str("city_name", value).Msg("found city")
+
+		return cityID, value, nil
 	}
 
-	return 0, "no city id found"
+	return 0, "", errors.New("no city id found")
 }
