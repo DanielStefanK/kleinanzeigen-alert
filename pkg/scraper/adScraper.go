@@ -50,6 +50,9 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 			}
 		})
 	})
+	c.OnError(func(r *colly.Response, e error) {
+		log.Error().Err(e).Msg("error while scraping for ads")
+	})
 
 	c.Visit(query)
 
@@ -72,18 +75,27 @@ func FindCityID(untrimmed string) (int, string, error) {
 
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf(cityURL, city), nil)
 
+	if err != nil {
+		log.Error().Err(err).Msg("could not create the request")
+		return 0, "", errors.New("could not make request")
+	}
+
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:74.0) Gecko/20100101 Firefox/74.0")
 	req.Header.Set("Accept", "*/*")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.5")
-
-	if err != nil {
-		return 0, "", errors.New("could not make request")
-	}
 
 	res, getErr := spaceClient.Do(req)
 
 	if getErr != nil {
 		return 0, "", errors.New("could not send request")
+	}
+
+	if res.StatusCode != 200 {
+		log.Error().Str("status_code", res.Status).Msg("received a wrong status code.")
+		if res.StatusCode == 403 {
+			log.Error().Msg("ip address might be blocked by kleinanzeigen.")
+		}
+		return 0, "", errors.New("request for city not successful")
 	}
 
 	body, readErr := ioutil.ReadAll(res.Body)
