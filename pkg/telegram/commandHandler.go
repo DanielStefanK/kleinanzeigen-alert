@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -59,6 +60,7 @@ func (b *Bot) Start() {
 		}
 
 		for update := range updates {
+
 			if update.Message == nil { // ignore any non-Message updates
 				continue
 			}
@@ -143,10 +145,14 @@ func (b *Bot) Start() {
 }
 
 // SendAds send the given ad the the given chatId
-func (b *Bot) SendAds(chatID int64, ads []scraper.Ad) {
+func (b *Bot) SendAds(chatID int64, ads []scraper.Ad) error {
 	for _, ad := range ads {
-		b.sendMsg(formatAd(ad), chatID)
+		err := b.sendMsg(formatAd(ad), chatID)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (b *Bot) sendQueries(chatID int64, queries []model.Query) {
@@ -159,15 +165,26 @@ func (b *Bot) sendQueries(chatID int64, queries []model.Query) {
 	}
 }
 
-func (b *Bot) sendMsg(msg string, chatID int64) {
+func (b *Bot) sendMsg(msg string, chatID int64) error {
 	telegramMessage := tgbotapi.NewMessage(chatID, msg)
 	telegramMessage.ParseMode = tgbotapi.ModeHTML
 
 	_, err := b.internalBot.Send(telegramMessage)
 
 	if err != nil {
-		log.Error().Err(err).Msg("could not send telegram message")
+		if err.Error() == blocked {
+			log.Info().Msg("the bot was blocked by the user. could not send message.")
+			return errors.New("user blocked the bot")
+		}
+
+		if err.Error() == deactivated {
+			log.Info().Msg("the bot was deactivated. could not send message.")
+			return errors.New("user is deactivated")
+		}
+
+		log.Warn().Err(err).Msg("could not send telegram message")
 	}
+	return nil
 }
 
 func formatQuery(q model.Query) string {

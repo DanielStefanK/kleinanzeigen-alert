@@ -69,7 +69,18 @@ func main() {
 			go func(query model.Query) {
 				new := s.GetLatest(query.ID)
 				log.Debug().Int("number_of_new_ads", len(new)).Msg("new ads found")
-				bot.SendAds(query.ChatID, new)
+				err := bot.SendAds(query.ChatID, new)
+				if err != nil {
+					affected, err := s.RemoveByChatID(query.ChatID)
+					if err != nil {
+						log.Error().Err(err).
+							Msg("could not remove  queries for blocked/deactivated user")
+					} else {
+						log.Info().
+							Int("number_of_removed_queries", affected).
+							Msg("removed queries for blocked/deactivated user")
+					}
+				}
 			}(q)
 		}
 

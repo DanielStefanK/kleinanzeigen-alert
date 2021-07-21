@@ -125,6 +125,13 @@ func (s *Storage) RemoveByID(id uint, chatID int64) *model.Query {
 	return q
 }
 
+// RemoveByChatID removes all queries for a chat id
+func (s *Storage) RemoveByChatID(chatID int64) (int, error) {
+	trx := s.db.Where(&model.Query{ChatID: chatID}).Delete(&model.Query{})
+
+	return int(trx.RowsAffected), trx.Error
+}
+
 //GetLatest fetches the latest ads from kleinanzeigen. All ads where the id is not in the db is returned and the db is updated with the latest ads
 func (s *Storage) GetLatest(id uint) []scraper.Ad {
 	q := s.FindQueryByID(id)
