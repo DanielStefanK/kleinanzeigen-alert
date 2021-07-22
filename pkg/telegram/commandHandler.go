@@ -73,9 +73,9 @@ func (b *Bot) Start() {
 			switch update.Message.Command() {
 			case "start":
 				log.Debug().Str("telegram_username", update.Message.Chat.UserName).Msg("Starting bot.")
-				b.sendMsg(generateHelpText(), update.Message.Chat.ID)
+				b.sendMsgRaw(generateHelpText(), update.Message.Chat.ID)
 			case "help":
-				b.sendMsg(generateHelpText(), update.Message.Chat.ID)
+				b.sendMsgRaw(generateHelpText(), update.Message.Chat.ID)
 			case "list":
 				go func() {
 					queries := b.storage.ListForChatID(update.Message.Chat.ID)
@@ -98,7 +98,7 @@ func (b *Bot) Start() {
 							Msg("added new query.")
 					}
 
-					b.sendMsg(msg, update.Message.Chat.ID)
+					b.sendMsgRaw(msg, update.Message.Chat.ID)
 				}()
 			case "remove":
 				go func() {
@@ -129,14 +129,14 @@ func (b *Bot) Start() {
 
 					}
 
-					b.sendMsg(msg, update.Message.Chat.ID)
+					b.sendMsgRaw(msg, update.Message.Chat.ID)
 				}()
 			case "clear":
 				go func() {
-					b.sendMsg("kommt bald.", update.Message.Chat.ID)
+					b.sendMsgRaw("kommt bald.", update.Message.Chat.ID)
 				}()
 			default:
-				b.sendMsg("Das Kommando kenne ich nicht.", update.Message.Chat.ID)
+				b.sendMsgRaw("Das Kommando kenne ich nicht.", update.Message.Chat.ID)
 			}
 
 			lastUpdateID = update.UpdateID
@@ -147,7 +147,7 @@ func (b *Bot) Start() {
 // SendAds send the given ad the the given chatId
 func (b *Bot) SendAds(chatID int64, ads []scraper.Ad) error {
 	for _, ad := range ads {
-		err := b.sendMsg(formatAd(ad), chatID)
+		err := b.sendMsg(formatAd(ad), formatAdRaw(ad), chatID)
 		if err != nil {
 			return err
 		}
@@ -157,15 +157,22 @@ func (b *Bot) SendAds(chatID int64, ads []scraper.Ad) error {
 
 func (b *Bot) sendQueries(chatID int64, queries []model.Query) {
 	if len(queries) == 0 {
-		b.sendMsg("Keine Suchen gefunden. Füge ein mit <code>/add</code> hinzu.", chatID)
+		b.sendMsg(
+			"Keine Suchen gefunden. Füge ein mit <code>/add</code> hinzu.",
+			"Keine Suchen gefunden. Füge ein mit /add hinzu.",
+			chatID)
 	} else {
 		for _, q := range queries {
-			b.sendMsg(formatQuery(q), chatID)
+			b.sendMsg(formatQuery(q), formatQueryRaw(q), chatID)
 		}
 	}
 }
 
-func (b *Bot) sendMsg(msg string, chatID int64) error {
+func (b *Bot) sendMsgRaw(msg string, chatID int64) error {
+	return b.sendMsg(msg, msg, chatID)
+}
+
+func (b *Bot) sendMsg(msg string, raw string, chatID int64) error {
 	telegramMessage := tgbotapi.NewMessage(chatID, msg)
 	telegramMessage.ParseMode = tgbotapi.ModeHTML
 
@@ -182,8 +189,18 @@ func (b *Bot) sendMsg(msg string, chatID int64) error {
 			return errors.New("user is deactivated")
 		}
 
-		log.Warn().Err(err).Str("send_message", msg).Msg("could not send telegram message")
+		if strings.HasPrefix(err.Error(), "Bad Request: can't parse entities") {
+			log.Info().Msg("msg has invalid html. trying to send raw data.")
+			telegramMessage := tgbotapi.NewMessage(chatID, raw)
+
+			_, err := b.internalBot.Send(telegramMessage)
+
+			if err != nil {
+				log.Warn().Err(err).Str("send_message", msg).Msg("could not send telegram message")
+			}
+		}
 	}
+
 	return nil
 }
 
@@ -198,11 +215,31 @@ func formatQuery(q model.Query) string {
 	return b.String()
 }
 
+func formatQueryRaw(q model.Query) string {
+	var b strings.Builder
+	f := fmt.Sprintf
+	b.WriteString(f("Suchbegriff: %s\n", q.Term))
+	b.WriteString(f("Radius: %v km\n", q.Radius))
+	b.WriteString(f("Stadt: %s\n", q.CityName))
+	b.WriteString(f("ID: %v", q.ID))
+
+	return b.String()
+}
+
 func formatAd(ad scraper.Ad) string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("<b>%s</b> - %s\n", ad.Title, ad.Price))
 	b.WriteString(f("<a href=\"%s\">hier</a>", ad.Link))
+
+	return b.String()
+}
+
+func formatAdRaw(ad scraper.Ad) string {
+	var b strings.Builder
+	f := fmt.Sprintf
+	b.WriteString(f("%s - %s\n", ad.Title, ad.Price))
+	b.WriteString(f("Link: %s", ad.Link))
 
 	return b.String()
 }
