@@ -182,7 +182,7 @@ func (b *Bot) sendMsg(msg string, chatID int64) error {
 			return errors.New("user is deactivated")
 		}
 
-		log.Warn().Err(err).Msg("could not send telegram message")
+		log.Warn().Err(err).Str("send_message", msg).Msg("could not send telegram message")
 	}
 	return nil
 }
