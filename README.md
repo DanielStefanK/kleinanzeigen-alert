@@ -7,7 +7,7 @@ A very simple telegram bot that notifies you of new Ebay-Kleinanzeigen listings.
 
 
 ## Demo
-![Alt Text](https://imgur.com/a/t7nozkb)
+(https://media.giphy.com/media/YLHnOfY1fgmKtgcgaS/giphy.gif)
 
 
 ## Installation
