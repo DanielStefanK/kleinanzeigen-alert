@@ -302,8 +302,8 @@ func generateHelpText() string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("<u>Hinzufügen von Suchen</u>\n"))
-	b.WriteString(f("schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Minimalpreis}, {Maximalpreis} </code>\n"))
-	b.WriteString(f("z.B. <code>/add Fahrrad, Köln, 20, 50, 2000, egal</code>\n"))
+	b.WriteString(f("schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Minimalpreis}, {Maximalpreis} ,{Angebotstyp}  </code>\n"))
+	b.WriteString(f("z.B. <code>/add apple, Köln, 20, 50, 2000, privat</code>\n"))
 	b.WriteString(f("Dies führt jede minute eine Suche aus und du kommst die neuesten Einträge hier.\n"))
 
 	b.WriteString(f("\n"))
