@@ -46,7 +46,7 @@ remove search query with the id ID:
 
 ## Authors
 
-- [@DanielStefanK](https://https://github.com/DanielStefanK)
-- [@Johannes-ece](https://https://github.com/Johannes-ece)
+- [@DanielStefanK](https://github.com/DanielStefanK)
+- [@Johannes-ece](https://github.com/Johannes-ece)
 
   
