@@ -87,7 +87,7 @@ func (b *Bot) Start() {
 					q, success := getQueryFromArgs(update.Message.CommandArguments(), update.Message.Chat.ID, b.storage)
 
 					if !success {
-						msg = "Um eine Suche hinzuzufügen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}</code>"
+						msg = "Um eine Suche hinzuzufügen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Minimalpreis}, {Maximalpreis}, {Angebotstyp} </code>"
 					} else {
 						msg = fmt.Sprintf("Suche für <b>%s</b> in <b>%s</b> hinzugefügt. ID: <b>%d</b>", q.Term, q.CityName, q.ID)
 						log.Debug().
@@ -95,6 +95,9 @@ func (b *Bot) Start() {
 							Str("term", q.Term).
 							Str("city", q.CityName).
 							Int("radius", q.Radius).
+							Int("pricemin", q.Pricemin).
+							Int("pricemax", q.Pricemax).
+							Str("saletype", q.Saletype).
 							Msg("added new query.")
 					}
 
@@ -123,6 +126,9 @@ func (b *Bot) Start() {
 									Str("term", removedQ.Term).
 									Str("city", removedQ.CityName).
 									Int("radius", removedQ.Radius).
+									Int("pricemin", removedQ.Pricemin).
+									Int("pricemax", removedQ.Pricemax).
+									Str("saletype", removedQ.Saletype).
 									Msg("query removed")
 							}
 						}
@@ -210,6 +216,9 @@ func formatQuery(q model.Query) string {
 	b.WriteString(f("Suchbegriff: <b>%s</b>\n", q.Term))
 	b.WriteString(f("Radius: <b>%v km</b>\n", q.Radius))
 	b.WriteString(f("Stadt: <b>%s</b>\n", q.CityName))
+	b.WriteString(f("Minimalpreis: <b>%v€</b>\n", q.Pricemin))
+	b.WriteString(f("Maximalpreis: <b>%v€</b>\n", q.Pricemax))
+	b.WriteString(f("Verkaufsart: <b>%s</b>\n", q.Saletype))
 	b.WriteString(f("ID: <b>%v</b>", q.ID))
 
 	return b.String()
@@ -221,6 +230,9 @@ func formatQueryRaw(q model.Query) string {
 	b.WriteString(f("Suchbegriff: %s\n", q.Term))
 	b.WriteString(f("Radius: %v km\n", q.Radius))
 	b.WriteString(f("Stadt: %s\n", q.CityName))
+	b.WriteString(f("Minimalpreis: <b>%v€</b>\n", q.Pricemin))
+	b.WriteString(f("Maximalpreis: <b>%v€</b>\n", q.Pricemax))
+	b.WriteString(f("Verkaufsart: <b>%s</b>\n", q.Saletype))
 	b.WriteString(f("ID: %v", q.ID))
 
 	return b.String()
@@ -245,9 +257,10 @@ func formatAdRaw(ad scraper.Ad) string {
 }
 
 func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Query, bool) {
+	fmt.Println(args)
 	arr := strings.SplitN(args, ",", -1)
 
-	if len(arr) != 3 {
+	if len(arr) != 6 {
 		return nil, false
 	}
 
@@ -255,18 +268,28 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 	city := arr[1]
 
 	radius, err := strconv.Atoi(strings.Trim(arr[2], " "))
+	pricemin, err := strconv.Atoi(strings.Trim(arr[3], " "))
+	pricemax, err := strconv.Atoi(strings.Trim(arr[4], " "))
+	saletype := arr[5]
+
+	//////////////////////////////////////
+	fmt.Println("pricemax")
+	//////////////////////////////////////
 
 	if err != nil {
 		return nil, false
 	}
 
-	q, err := s.AddNewQuery(term, city, radius, chatID)
-
+	q, err := s.AddNewQuery(term, city, radius, chatID, pricemin, pricemax, saletype)
+	
 	if err != nil {
 		log.Warn().Err(err).
 			Str("term", q.Term).
 			Str("city", q.CityName).
 			Int("radius", q.Radius).
+			Int("pricemin", q.Pricemin).
+			Int("pricemax", q.Pricemax).
+			Str("saletype", q.Saletype).
 			Msg("could not create query")
 
 		return nil, false
@@ -279,8 +302,8 @@ func generateHelpText() string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("<u>Hinzufügen von Suchen</u>\n"))
-	b.WriteString(f("schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}</code>\n"))
-	b.WriteString(f("z.B. <code>/add Fahrrad, Köln, 20</code>\n"))
+	b.WriteString(f("schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Minimalpreis}, {Maximalpreis} </code>\n"))
+	b.WriteString(f("z.B. <code>/add Fahrrad, Köln, 20, 50, 2000, egal</code>\n"))
 	b.WriteString(f("Dies führt jede minute eine Suche aus und du kommst die neuesten Einträge hier.\n"))
 
 	b.WriteString(f("\n"))

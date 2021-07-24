@@ -12,8 +12,9 @@ type Query struct {
 	Term     string `gorm:"type:varchar(100)"`
 	Radius   int
 	City     int
-	pricemax int
-	pricemin int
+	Pricemax int
+	Pricemin int
+	Saletype string `gorm:"type:varchar(100)"`
 	CityName string `gorm:"type:varchar(100)"`
 }
 

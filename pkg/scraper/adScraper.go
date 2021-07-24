@@ -15,7 +15,7 @@ import (
 	"github.com/gocolly/colly"
 )
 
-const url = "https://www.ebay-kleinanzeigen.de/seite:%v/s-%s/k0l%vr%v"
+const url = "https://www.ebay-kleinanzeigen.de/seite:%v/anbieter:%s/preis:%v:%v/s-%s/k0l%vr%v"
 
 const cityURL = "https://www.ebay-kleinanzeigen.de/s-ort-empfehlungen.json?query=%s"
 
@@ -28,9 +28,14 @@ type Ad struct {
 }
 
 // GetAds gets the ads for the specified page serachterm citycode and radius
-func GetAds(page int, term string, cityCode int, radius int) []Ad {
-	log.Debug().Msg("scraping for ads")
-	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
+func GetAds(page int, term string, cityCode int, radius int, pricemin int, pricemax int, saletype string) []Ad {
+	log.Debug().Msg("scraping for ads")	
+	
+	if saletype == "egal" { 
+		saletype = ""
+	}
+	
+	query := fmt.Sprintf(url, page, strings.ReplaceAll(saletype, " ", ""), pricemin, pricemax, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
 
 	c := colly.NewCollector()
@@ -55,7 +60,7 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 	})
 
 	c.Visit(query)
-
+	
 	c.Wait()
 
 	log.Debug().Str("query", term).Int("number_of_queries", len(ads)).Msg("scraped ads for query")
