@@ -16,7 +16,7 @@ import (
 
 var token string
 
-const fetchDuration = time.Second * 1
+const fetchDuration = time.Second * 60
 
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
