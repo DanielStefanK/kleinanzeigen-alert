@@ -22,4 +22,3 @@ func (u *Query) AfterDelete(tx *gorm.DB) (err error) {
 	tx.Where("query_id = ?", u.ID).Delete(&Ad{})
 	return
 }
-TEST
