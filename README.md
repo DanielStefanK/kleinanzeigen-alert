@@ -3,6 +3,8 @@
 
 
 A very simple telegram bot that notifies you of new Ebay-Kleinanzeigen listings.
+Check it out on Telegram [@AlertAlertAlert_bot](https://t.me/AlertAlertAlert_bot).
+
 
 
 
@@ -33,8 +35,9 @@ Just run it:
 
  add a new search query:
 ```bash
-/add search term, city, radius, pricemin, pricemax, type of sale
+/add search term, city, radius, min_price, max_price, sale_type
 ```
+Note: the last three parameters are optional
 lists all search queries and show the corresponding ids:
 ```bash
 /list
@@ -44,9 +47,10 @@ remove search query with the id ID:
 /remove ID
 ```
 
-## Authors
-
+## Author
 - [@DanielStefanK](https://github.com/DanielStefanK)
+
+## Contributors
 - [@Johannes-ece](https://github.com/Johannes-ece)
 
   

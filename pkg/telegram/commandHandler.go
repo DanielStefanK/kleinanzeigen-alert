@@ -95,9 +95,9 @@ func (b *Bot) Start() {
 							Str("term", q.Term).
 							Str("city", q.CityName).
 							Int("radius", q.Radius).
-							Int("pricemin", q.Pricemin).
-							Int("pricemax", q.Pricemax).
-							Str("saletype", q.Saletype).
+							Int("min_price", q.MinPrice).
+							Int("max_price", q.MaxPrice).
+							Str("sale_type", q.SaleType).
 							Msg("added new query.")
 					}
 
@@ -126,9 +126,9 @@ func (b *Bot) Start() {
 									Str("term", removedQ.Term).
 									Str("city", removedQ.CityName).
 									Int("radius", removedQ.Radius).
-									Int("pricemin", removedQ.Pricemin).
-									Int("pricemax", removedQ.Pricemax).
-									Str("saletype", removedQ.Saletype).
+									Int("min_price", removedQ.MinPrice).
+									Int("max_price", removedQ.MaxPrice).
+									Str("sale_type", removedQ.SaleType).
 									Msg("query removed")
 							}
 						}
@@ -216,9 +216,9 @@ func formatQuery(q model.Query) string {
 	b.WriteString(f("Suchbegriff: <b>%s</b>\n", q.Term))
 	b.WriteString(f("Radius: <b>%v km</b>\n", q.Radius))
 	b.WriteString(f("Stadt: <b>%s</b>\n", q.CityName))
-	b.WriteString(f("Minimalpreis: <b>%v€</b>\n", q.Pricemin))
-	b.WriteString(f("Maximalpreis: <b>%v€</b>\n", q.Pricemax))
-	b.WriteString(f("Verkaufsart: <b>%s</b>\n", q.Saletype))
+	b.WriteString(f("Minimalpreis: <b>%v€</b>\n", q.MinPrice))
+	b.WriteString(f("Maximalpreis: <b>%v€</b>\n", q.MaxPrice))
+	b.WriteString(f("Verkaufsart: <b>%s</b>\n", q.SaleType))
 	b.WriteString(f("ID: <b>%v</b>", q.ID))
 
 	return b.String()
@@ -230,9 +230,9 @@ func formatQueryRaw(q model.Query) string {
 	b.WriteString(f("Suchbegriff: %s\n", q.Term))
 	b.WriteString(f("Radius: %v km\n", q.Radius))
 	b.WriteString(f("Stadt: %s\n", q.CityName))
-	b.WriteString(f("Minimalpreis: <b>%v€</b>\n", q.Pricemin))
-	b.WriteString(f("Maximalpreis: <b>%v€</b>\n", q.Pricemax))
-	b.WriteString(f("Verkaufsart: <b>%s</b>\n", q.Saletype))
+	b.WriteString(f("Minimalpreis: <b>%v€</b>\n", q.MinPrice))
+	b.WriteString(f("Maximalpreis: <b>%v€</b>\n", q.MaxPrice))
+	b.WriteString(f("Verkaufsart: <b>%s</b>\n", q.SaleType))
 	b.WriteString(f("ID: %v", q.ID))
 
 	return b.String()
@@ -257,7 +257,7 @@ func formatAdRaw(ad scraper.Ad) string {
 }
 
 func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Query, bool) {
-	fmt.Println(args)
+	
 	arr := strings.SplitN(args, ",", -1)
 
 	if len(arr) < 3 {
@@ -268,27 +268,27 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 	city := arr[1]
 
 	radius, err := strconv.Atoi(strings.Trim(arr[2], " "))
-	////////////////////////////////////// Certinaly not an elegant solution, but if it works it works...
-	////////////////////////////////////// I think I need to learn a bit more about go...
+	// Certinaly not an elegant solution, but if it works it works...
+	// Feel free to improve/replace it
 	
 	
-	if(len(arr)>3)	{
-		pricemin, err := strconv.Atoi(strings.Trim(arr[3], " "))
-		pricemax, err := strconv.Atoi(strings.Trim(arr[4], " "))
-		saletype := arr[5]
+	if len(arr)>3 	{
+		min_price, err := strconv.Atoi(strings.Trim(arr[3], " "))
+		max_price, err := strconv.Atoi(strings.Trim(arr[4], " "))
+		sale_type := arr[5]
 
 		if err != nil {
 			return nil, false
 		}
-		q, err := s.AddNewQuery(term, city, radius, chatID, pricemin, pricemax, saletype)
+		q, err := s.AddNewQuery(term, city, radius, chatID, min_price, max_price, sale_type)
 		if err != nil {
 			log.Warn().Err(err).
 				Str("term", q.Term).
 				Str("city", q.CityName).
 				Int("radius", q.Radius).
-				Int("pricemin", q.Pricemin).
-				Int("pricemax", q.Pricemax).
-				Str("saletype", q.Saletype).
+				Int("min_price", q.MinPrice).
+				Int("max_price", q.MaxPrice).
+				Str("sale_type", q.SaleType).
 				Msg("could not create query")
 	
 			return nil, false
@@ -305,9 +305,9 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 				Str("term", q.Term).
 				Str("city", q.CityName).
 				Int("radius", q.Radius).
-				Int("pricemin", q.Pricemin).
-				Int("pricemax", q.Pricemax).
-				Str("saletype", q.Saletype).
+				Int("min_price", q.MinPrice).
+				Int("max_price", q.MaxPrice).
+				Str("sale_type", q.SaleType).
 				Msg("could not create query")
 	
 			return nil, false
@@ -316,7 +316,7 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 		return q, true
 
 	}
-	///////////////////////////////////
+	
 
 	
 	

@@ -44,14 +44,14 @@ func (s *Storage) CloseDB() {
 }
 
 // AddNewQuery adds a new query to the db
-func (s *Storage) AddNewQuery(term string, city string, radius int, chatID int64, pricemin int, pricemax int, saletype string) (*model.Query, error) {
+func (s *Storage) AddNewQuery(term string, city string, radius int, chatID int64, min_price int, max_price int, sale_type string) (*model.Query, error) {
 	cityID, cityName, err := scraper.FindCityID(city)
 
 	if err != nil {
 		return nil, errors.New("could not find city id")
 	}
 
-	query := model.Query{ChatID: chatID, Term: term, Radius: radius, City: cityID, CityName: cityName, Pricemin: pricemin,  Pricemax: pricemax, Saletype: saletype}
+	query := model.Query{ChatID: chatID, Term: term, Radius: radius, City: cityID, CityName: cityName, MinPrice: min_price,  MaxPrice: max_price, SaleType: sale_type}
 
 	//s.db.NewRecord(query)
 
@@ -62,7 +62,7 @@ func (s *Storage) AddNewQuery(term string, city string, radius int, chatID int64
 		return nil, errors.New("could not create query")
 	}
 
-	latestAds := scraper.GetAds(1, term, cityID, radius, pricemin, pricemax, saletype)
+	latestAds := scraper.GetAds(1, term, cityID, radius, min_price, max_price, sale_type)
 	err = s.storeLatestAds(latestAds, query.ID)
 
 	if err != nil {
@@ -140,7 +140,7 @@ func (s *Storage) GetLatest(id uint) []scraper.Ad {
 		return make([]scraper.Ad, 0, 0)
 	}
 
-	latest := scraper.GetAds(1, q.Term, q.City, q.Radius, q.Pricemin, q.Pricemax, q.Saletype)
+	latest := scraper.GetAds(1, q.Term, q.City, q.Radius, q.MinPrice, q.MaxPrice, q.SaleType)
 	diff := s.findDiff(latest, q.ID)
 
 	s.storeLatestAds(diff, q.ID)
