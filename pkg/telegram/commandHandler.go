@@ -87,7 +87,7 @@ func (b *Bot) Start() {
 					q, success := getQueryFromArgs(update.Message.CommandArguments(), update.Message.Chat.ID, b.storage)
 
 					if !success {
-						msg = "Um eine Suche hinzuzufügen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Minimalpreis}, {Maximalpreis}, {Angebotstyp} </code>"
+						msg = "Um eine Suche hinzuzufügen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Minimalpreis}, {Maximalpreis}, {Angebotstyp}\nDie letzen drei Parameter sind Optional. </code>"
 					} else {
 						msg = fmt.Sprintf("Suche für <b>%s</b> in <b>%s</b> hinzugefügt. ID: <b>%d</b>", q.Term, q.CityName, q.ID)
 						log.Debug().
@@ -260,7 +260,7 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 	fmt.Println(args)
 	arr := strings.SplitN(args, ",", -1)
 
-	if len(arr) != 6 {
+	if len(arr) < 3 {
 		return nil, false
 	}
 
@@ -268,34 +268,58 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 	city := arr[1]
 
 	radius, err := strconv.Atoi(strings.Trim(arr[2], " "))
-	pricemin, err := strconv.Atoi(strings.Trim(arr[3], " "))
-	pricemax, err := strconv.Atoi(strings.Trim(arr[4], " "))
-	saletype := arr[5]
-
-	//////////////////////////////////////
-	fmt.Println("pricemax")
-	//////////////////////////////////////
-
-	if err != nil {
-		return nil, false
-	}
-
-	q, err := s.AddNewQuery(term, city, radius, chatID, pricemin, pricemax, saletype)
+	////////////////////////////////////// Certinaly not an elegant solution, but if it works it works...
+	////////////////////////////////////// I think I need to learn a bit more about go...
 	
-	if err != nil {
-		log.Warn().Err(err).
-			Str("term", q.Term).
-			Str("city", q.CityName).
-			Int("radius", q.Radius).
-			Int("pricemin", q.Pricemin).
-			Int("pricemax", q.Pricemax).
-			Str("saletype", q.Saletype).
-			Msg("could not create query")
+	
+	if(len(arr)>3)	{
+		pricemin, err := strconv.Atoi(strings.Trim(arr[3], " "))
+		pricemax, err := strconv.Atoi(strings.Trim(arr[4], " "))
+		saletype := arr[5]
 
-		return nil, false
+		if err != nil {
+			return nil, false
+		}
+		q, err := s.AddNewQuery(term, city, radius, chatID, pricemin, pricemax, saletype)
+		if err != nil {
+			log.Warn().Err(err).
+				Str("term", q.Term).
+				Str("city", q.CityName).
+				Int("radius", q.Radius).
+				Int("pricemin", q.Pricemin).
+				Int("pricemax", q.Pricemax).
+				Str("saletype", q.Saletype).
+				Msg("could not create query")
+	
+			return nil, false
+		}
+	
+		return q, true
+	}else{
+		if err != nil {
+			return nil, false
+		}
+		q, err := s.AddNewQuery(term, city, radius, chatID, 0, 10000000, "")
+		if err != nil {
+			log.Warn().Err(err).
+				Str("term", q.Term).
+				Str("city", q.CityName).
+				Int("radius", q.Radius).
+				Int("pricemin", q.Pricemin).
+				Int("pricemax", q.Pricemax).
+				Str("saletype", q.Saletype).
+				Msg("could not create query")
+	
+			return nil, false
+		}
+	
+		return q, true
+
 	}
+	///////////////////////////////////
 
-	return q, true
+	
+	
 }
 
 func generateHelpText() string {
@@ -303,8 +327,9 @@ func generateHelpText() string {
 	f := fmt.Sprintf
 	b.WriteString(f("<u>Hinzufügen von Suchen</u>\n"))
 	b.WriteString(f("schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Minimalpreis}, {Maximalpreis} ,{Angebotstyp}  </code>\n"))
-	b.WriteString(f("z.B. <code>/add apple, Köln, 20, 50, 2000, privat</code>\n"))
-	b.WriteString(f("Dies führt jede minute eine Suche aus und du kommst die neuesten Einträge hier.\n"))
+	b.WriteString(f("z.B. <code>/add apple, Köln, 200, 50, 2000, privat</code>\n"))
+	b.WriteString(f("z.B. <code>/add apple, Köln, 200 </code>\n"))
+	b.WriteString(f("Dies führt jede minute eine Suche aus und du kommst die neuesten Einträge hier. Die letzen drei Parameter sind Optional.\n"))
 
 	b.WriteString(f("\n"))
 	b.WriteString(f("<u>Listen von alles Suchen</u>\n"))
