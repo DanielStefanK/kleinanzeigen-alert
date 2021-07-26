@@ -257,7 +257,7 @@ func formatAdRaw(ad scraper.Ad) string {
 }
 
 func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Query, bool) {
-	
+
 	arr := strings.SplitN(args, ",", -1)
 
 	if len(arr) < 3 {
@@ -270,9 +270,8 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 	radius, err := strconv.Atoi(strings.Trim(arr[2], " "))
 	// Certinaly not an elegant solution, but if it works it works...
 	// Feel free to improve/replace it
-	
-	
-	if len(arr)>3 	{
+
+	if len(arr) > 3 {
 		min_price, err := strconv.Atoi(strings.Trim(arr[3], " "))
 		max_price, err := strconv.Atoi(strings.Trim(arr[4], " "))
 		sale_type := arr[5]
@@ -290,12 +289,12 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 				Int("max_price", q.MaxPrice).
 				Str("sale_type", q.SaleType).
 				Msg("could not create query")
-	
+
 			return nil, false
 		}
-	
+
 		return q, true
-	}else{
+	} else {
 		if err != nil {
 			return nil, false
 		}
@@ -309,17 +308,14 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 				Int("max_price", q.MaxPrice).
 				Str("sale_type", q.SaleType).
 				Msg("could not create query")
-	
+
 			return nil, false
 		}
-	
+
 		return q, true
 
 	}
-	
 
-	
-	
 }
 
 func generateHelpText() string {

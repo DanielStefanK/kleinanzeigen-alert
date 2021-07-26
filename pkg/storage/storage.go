@@ -51,7 +51,7 @@ func (s *Storage) AddNewQuery(term string, city string, radius int, chatID int64
 		return nil, errors.New("could not find city id")
 	}
 
-	query := model.Query{ChatID: chatID, Term: term, Radius: radius, City: cityID, CityName: cityName, MinPrice: min_price,  MaxPrice: max_price, SaleType: sale_type}
+	query := model.Query{ChatID: chatID, Term: term, Radius: radius, City: cityID, CityName: cityName, MinPrice: min_price, MaxPrice: max_price, SaleType: sale_type}
 
 	//s.db.NewRecord(query)
 

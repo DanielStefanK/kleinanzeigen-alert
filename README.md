@@ -9,7 +9,7 @@ Check it out on Telegram [@AlertAlertAlert_bot](https://t.me/AlertAlertAlert_bot
 
 
 ## Demo
-![](example.gif)
+![](/doc/example.gif)
 
 
 ## Installation

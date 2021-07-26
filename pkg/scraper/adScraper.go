@@ -29,9 +29,8 @@ type Ad struct {
 
 // GetAds gets the ads for the specified page serachterm citycode and radius
 func GetAds(page int, term string, cityCode int, radius int, min_price int, max_price int, sale_type string) []Ad {
-	log.Debug().Msg("scraping for ads")	
-	
-	
+	log.Debug().Msg("scraping for ads")
+
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(sale_type, " ", ""), min_price, max_price, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
 
@@ -57,7 +56,7 @@ func GetAds(page int, term string, cityCode int, radius int, min_price int, max_
 	})
 
 	c.Visit(query)
-	
+
 	c.Wait()
 
 	log.Debug().Str("query", term).Int("number_of_queries", len(ads)).Msg("scraped ads for query")
