@@ -87,7 +87,7 @@ func (b *Bot) Start() {
 					q, success := getQueryFromArgs(update.Message.CommandArguments(), update.Message.Chat.ID, b.storage)
 
 					if !success {
-						msg = "Um eine Suche hinzuzufügen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}</code>"
+						msg = "Um eine Suche hinzuzufügen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Preis ohne \"€\", \",\",\".\"</code>"
 					} else {
 						msg = fmt.Sprintf("Suche für <b>%s</b> in <b>%s</b> hinzugefügt. ID: <b>%d</b>", q.Term, q.CityName, q.ID)
 						log.Debug().
@@ -247,7 +247,7 @@ func formatAdRaw(ad scraper.Ad) string {
 func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Query, bool) {
 	arr := strings.SplitN(args, ",", -1)
 
-	if len(arr) != 3 {
+	if len(arr) < 2 || len(arr) > 4 {
 		return nil, false
 	}
 
@@ -255,12 +255,22 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 	city := arr[1]
 
 	radius, err := strconv.Atoi(strings.Trim(arr[2], " "))
-
 	if err != nil {
 		return nil, false
 	}
 
-	q, err := s.AddNewQuery(term, city, radius, chatID)
+	var q *model.Query
+
+	if len(arr) > 3 {
+		price, err := strconv.Atoi(strings.Trim(arr[3], " "))
+
+		if err != nil {
+			return nil, false
+		}
+		q, err = s.AddNewQuery(term, city, radius, &price, chatID)
+	} else {
+		q, err = s.AddNewQuery(term, city, radius, nil, chatID)
+	}
 
 	if err != nil {
 		log.Warn().Err(err).
@@ -279,7 +289,7 @@ func generateHelpText() string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("<u>Hinzufügen von Suchen</u>\n"))
-	b.WriteString(f("schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}</code>\n"))
+	b.WriteString(f("schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Preis ohne \"€\", \",\",\".\"}?</code>\n"))
 	b.WriteString(f("z.B. <code>/add Fahrrad, Köln, 20</code>\n"))
 	b.WriteString(f("Dies führt jede minute eine Suche aus und du kommst die neuesten Einträge hier.\n"))
 

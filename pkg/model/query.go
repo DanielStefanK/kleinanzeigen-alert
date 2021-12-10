@@ -13,6 +13,7 @@ type Query struct {
 	Radius   int
 	City     int
 	CityName string `gorm:"type:varchar(100)"`
+	MaxPrice *int
 }
 
 // AfterDelete delete all assiciated ads

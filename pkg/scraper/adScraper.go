@@ -28,7 +28,7 @@ type Ad struct {
 }
 
 // GetAds gets the ads for the specified page serachterm citycode and radius
-func GetAds(page int, term string, cityCode int, radius int) []Ad {
+func GetAds(page int, term string, cityCode int, radius int, maxPrice *int) []Ad {
 	log.Debug().Msg("scraping for ads")
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
@@ -41,6 +41,27 @@ func GetAds(page int, term string, cityCode int, radius int) []Ad {
 				link := e.DOM.Find("a[class=ellipsis]")
 				linkURL, _ := link.Attr("href")
 				price := strings.TrimSpace(e.DOM.Find("p[class=aditem-main--middle--price]").Text())
+
+				if maxPrice != nil {
+					replacted := strings.Trim(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.Trim(price, " "), "VB", ""), "€", ""), ".", ""), " ")
+
+					if len(replacted) == 0 {
+						return
+					}
+
+					priceValue, err := strconv.Atoi(replacted)
+
+					if err != nil {
+						log.Warn().Str("price-string", replacted).Msg("could not parse price from ad")
+						return
+					}
+
+					if priceValue >= *maxPrice {
+						log.Debug().Msg("price is bigger than requested")
+						return
+					}
+				}
+
 				id, idExsits := e.DOM.Find("article[class=aditem]").Attr("data-adid")
 				//details := e.DOM.Find("div[class=aditem-details]")
 				title := link.Text()
