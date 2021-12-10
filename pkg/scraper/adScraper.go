@@ -42,7 +42,7 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int) []Ad
 				linkURL, _ := link.Attr("href")
 				price := strings.TrimSpace(e.DOM.Find("p[class=aditem-main--middle--price]").Text())
 
-				if maxPrice != nil {
+				if maxPrice != nil && strings.ToLower(price) != "zu verschenken" {
 					replacted := strings.Trim(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.Trim(price, " "), "VB", ""), "€", ""), ".", ""), " ")
 
 					if len(replacted) == 0 {
