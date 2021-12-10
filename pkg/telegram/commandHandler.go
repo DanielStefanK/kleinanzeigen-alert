@@ -213,7 +213,7 @@ func formatQuery(q model.Query) string {
 	b.WriteString(f("ID: <b>%v</b>", q.ID))
 
 	if q.MaxPrice != nil {
-		b.WriteString(f("Max Price: <b>%v</b>", q.MaxPrice))
+		b.WriteString(f("Max Price: <b>%v</b>", *q.MaxPrice))
 	}
 
 	return b.String()
