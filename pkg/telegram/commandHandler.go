@@ -223,6 +223,10 @@ func formatQueryRaw(q model.Query) string {
 	b.WriteString(f("Stadt: %s\n", q.CityName))
 	b.WriteString(f("ID: %v", q.ID))
 
+	if q.MaxPrice != nil {
+		b.WriteString(f("Max Preis: %v", q.MaxPrice))
+	}
+
 	return b.String()
 }
 
