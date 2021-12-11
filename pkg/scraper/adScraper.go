@@ -77,7 +77,7 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 		})
 	})
 	c.OnError(func(r *colly.Response, e error) {
-		log.Error().Err(e).Msg("error while scraping for ads")
+		log.Error().Err(e).Str("term", term).Int("radius", radius).Msg("error while scraping for ads")
 	})
 
 	c.Visit(query)
