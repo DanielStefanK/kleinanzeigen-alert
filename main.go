@@ -69,7 +69,7 @@ func main() {
 			go func(query model.Query) {
 				new := s.GetLatest(query.ID)
 				log.Debug().Int("number_of_new_ads", len(new)).Msg("new ads found")
-				err := bot.SendAds(query.ChatID, new)
+				err := bot.SendAds(query.ChatID, new, query)
 				if err != nil {
 					affected, err := s.RemoveByChatID(query.ChatID)
 					if err != nil {
