@@ -28,7 +28,7 @@ type Ad struct {
 }
 
 // GetAds gets the ads for the specified page serachterm citycode and radius
-func GetAds(page int, term string, cityCode int, radius int, maxPrice *int) []Ad {
+func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minPrice *int) []Ad {
 	log.Debug().Msg("scraping for ads")
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
@@ -58,6 +58,11 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int) []Ad
 
 					if priceValue >= *maxPrice {
 						log.Debug().Msg("price is bigger than requested")
+						return
+					}
+
+					if minPrice != nil && priceValue < *minPrice {
+						log.Debug().Msg("price is lower than requested")
 						return
 					}
 				}

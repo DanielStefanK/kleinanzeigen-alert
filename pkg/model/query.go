@@ -14,6 +14,7 @@ type Query struct {
 	City     int
 	CityName string `gorm:"type:varchar(100)"`
 	MaxPrice *int
+	MinPrice *int
 }
 
 // AfterDelete delete all assiciated ads

@@ -87,7 +87,7 @@ func (b *Bot) Start() {
 					q, success := getQueryFromArgs(update.Message.CommandArguments(), update.Message.Chat.ID, b.storage)
 
 					if !success {
-						msg = "Um eine Suche hinzuzufügen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Preis ohne \"€\", \",\",\".\"</code>"
+						msg = "Um eine Suche hinzuzufügen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Max Preis ohne \"€\", \",\",\".\"}, {Min Preis ohne \"€\", \",\",\".\"}?</code>"
 					} else {
 						msg = fmt.Sprintf("Suche für <b>%s</b> in <b>%s</b> hinzugefügt. ID: <b>%d</b>", q.Term, q.CityName, q.ID)
 						log.Debug().
@@ -213,7 +213,11 @@ func formatQuery(q model.Query) string {
 	b.WriteString(f("ID: <b>%v</b>", q.ID))
 
 	if q.MaxPrice != nil {
-		b.WriteString(f("Max Price: <b>%v</b>", *q.MaxPrice))
+		b.WriteString(f("\nMax Preis: <b>%v €</b>", *q.MaxPrice))
+	}
+
+	if q.MinPrice != nil {
+		b.WriteString(f("\nMin Preis: <b>%v €</b>", *q.MinPrice))
 	}
 
 	return b.String()
@@ -228,7 +232,11 @@ func formatQueryRaw(q model.Query) string {
 	b.WriteString(f("ID: %v", q.ID))
 
 	if q.MaxPrice != nil {
-		b.WriteString(f("Max Preis: %v", q.MaxPrice))
+		b.WriteString(f("Max Preis: %v €", q.MaxPrice))
+	}
+
+	if q.MinPrice != nil {
+		b.WriteString(f("Max Preis: %v €", q.MinPrice))
 	}
 
 	return b.String()
@@ -255,7 +263,7 @@ func formatAdRaw(ad scraper.Ad) string {
 func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Query, bool) {
 	arr := strings.SplitN(args, ",", -1)
 
-	if len(arr) < 2 || len(arr) > 4 {
+	if len(arr) < 2 || len(arr) > 5 {
 		return nil, false
 	}
 
@@ -275,9 +283,21 @@ func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Que
 		if err != nil {
 			return nil, false
 		}
-		q, err = s.AddNewQuery(term, city, radius, &price, chatID)
+
+		if len(arr) > 4 {
+			minPrice, err := strconv.Atoi(strings.Trim(arr[4], " "))
+
+			if err != nil {
+				return nil, false
+			}
+
+			q, err = s.AddNewQuery(term, city, radius, &price, &minPrice, chatID)
+		} else {
+			q, err = s.AddNewQuery(term, city, radius, &price, nil, chatID)
+		}
+
 	} else {
-		q, err = s.AddNewQuery(term, city, radius, nil, chatID)
+		q, err = s.AddNewQuery(term, city, radius, nil, nil, chatID)
 	}
 
 	if err != nil {
@@ -297,7 +317,7 @@ func generateHelpText() string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("<u>Hinzufügen von Suchen</u>\n"))
-	b.WriteString(f("schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Preis ohne \"€\", \",\",\".\"}?</code>\n"))
+	b.WriteString(f("schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Max Preis ohne \"€\", \",\",\".\"}?, {Min Preis ohne \"€\", \",\",\".\"}?</code>\n"))
 	b.WriteString(f("z.B. <code>/add Fahrrad, Köln, 20</code>\n"))
 	b.WriteString(f("Dies führt jede minute eine Suche aus und du kommst die neuesten Einträge hier.\n"))
 
