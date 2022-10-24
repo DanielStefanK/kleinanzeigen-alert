@@ -32,7 +32,6 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 	log.Debug().Msg("scraping for ads")
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
-
 	c := colly.NewCollector()
 
 	c.OnHTML("#srchrslt-adtable", func(adListEl *colly.HTMLElement) {
@@ -40,7 +39,7 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 			if !strings.Contains(e.DOM.Nodes[0].Attr[0].Val, "is-topad") {
 				link := e.DOM.Find("a[class=ellipsis]")
 				linkURL, _ := link.Attr("href")
-				price := strings.TrimSpace(e.DOM.Find("p[class=aditem-main--middle--price]").Text())
+				price := strings.TrimSpace(e.DOM.Find("p[class=aditem-main--middle--price-shipping--price]").Text())
 
 				if maxPrice != nil && strings.ToLower(price) != "zu verschenken" {
 					replacted := strings.Trim(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.Trim(price, " "), "VB", ""), "€", ""), ".", ""), " ")
