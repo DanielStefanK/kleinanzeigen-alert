@@ -147,7 +147,7 @@ func (b *Bot) Start() {
 // SendAds send the given ad the the given chatId
 func (b *Bot) SendAds(chatID int64, ads []scraper.Ad, q model.Query) error {
 	for _, ad := range ads {
-		err := b.sendMsg(formatAd(ad, q.Term, int(q.ID)), formatAdRaw(ad, q.Term, int(q.ID)), chatID)
+		err := b.sendMsg(formatAd(ad, q.Term, int(q.ID), q), formatAdRaw(ad, q.Term, int(q.ID), q), chatID)
 		if err != nil {
 			return err
 		}
@@ -242,20 +242,22 @@ func formatQueryRaw(q model.Query) string {
 	return b.String()
 }
 
-func formatAd(ad scraper.Ad, term string, id int) string {
+func formatAd(ad scraper.Ad, term string, id int, q storage.Query) string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("<b>%s</b> - %s\n", ad.Title, ad.Price))
+	b.WriteString(f("in %s", q.CityName))
 	b.WriteString(f("For search \"%s\" (ID: %v)\n", term, id))
 	b.WriteString(f("<a href=\"%s\">Hier klicken!</a>", ad.Link))
 
 	return b.String()
 }
 
-func formatAdRaw(ad scraper.Ad, term string, id int) string {
+func formatAdRaw(ad scraper.Ad, term string, id int, q storage.Query) string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("%s - %s\n", ad.Title, ad.Price))
+	b.WriteString(f("in %s", q.CityName))
 	b.WriteString(f("For search \"%s\" (ID: %v)\n", term, id))
 	b.WriteString(f("Link: %s", ad.Link))
 
