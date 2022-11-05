@@ -242,7 +242,7 @@ func formatQueryRaw(q model.Query) string {
 	return b.String()
 }
 
-func formatAd(ad scraper.Ad, term string, id int, q storage.Query) string {
+func formatAd(ad scraper.Ad, term string, id int, q model.Query) string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("<b>%s</b> - %s\n", ad.Title, ad.Price))
@@ -253,7 +253,7 @@ func formatAd(ad scraper.Ad, term string, id int, q storage.Query) string {
 	return b.String()
 }
 
-func formatAdRaw(ad scraper.Ad, term string, id int, q storage.Query) string {
+func formatAdRaw(ad scraper.Ad, term string, id int, q model.Query) string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("%s - %s\n", ad.Title, ad.Price))
