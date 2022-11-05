@@ -246,7 +246,7 @@ func formatAd(ad scraper.Ad, term string, id int, q model.Query) string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("<b>%s</b> - %s\n", ad.Title, ad.Price))
-	b.WriteString(f("in %s", q.CityName))
+	b.WriteString(f("in %s\n", q.CityName))
 	b.WriteString(f("For search \"%s\" (ID: %v)\n", term, id))
 	b.WriteString(f("<a href=\"%s\">Hier klicken!</a>", ad.Link))
 
@@ -257,7 +257,7 @@ func formatAdRaw(ad scraper.Ad, term string, id int, q model.Query) string {
 	var b strings.Builder
 	f := fmt.Sprintf
 	b.WriteString(f("%s - %s\n", ad.Title, ad.Price))
-	b.WriteString(f("in %s", q.CityName))
+	b.WriteString(f("in %s \n", q.CityName))
 	b.WriteString(f("For search \"%s\" (ID: %v)\n", term, id))
 	b.WriteString(f("Link: %s", ad.Link))
 
