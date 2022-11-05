@@ -39,7 +39,6 @@ This will list all your current searches
 write `/remove {ID}`
 You get the ID from the list command. This will delete the search and you will no longer receive messages for it.
 
-```
 
 ## Author
 - [@DanielStefanK](https://github.com/DanielStefanK)
