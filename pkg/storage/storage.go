@@ -158,7 +158,7 @@ func (s *Storage) DeleteOlderAds() (int64, error) {
 
 func (s *Storage) storeLatestAds(ads []scraper.Ad, qID uint) error {
 	for _, item := range ads {
-		ad := model.Ad{EbayID: item.ID, QueryID: qID}
+		ad := model.Ad{EbayID: item.ID, QueryID: qID, Location: item.Location}
 		s.db.NewRecord(&ad)
 		err := s.db.Create(&ad).Error
 		if err != nil {

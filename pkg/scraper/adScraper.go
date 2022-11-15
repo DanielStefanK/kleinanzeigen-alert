@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -21,10 +22,11 @@ const cityURL = "https://www.ebay-kleinanzeigen.de/s-ort-empfehlungen.json?query
 
 // Ad is a representation of the kleinanzeigen ads
 type Ad struct {
-	Title string
-	Link  string
-	Price string
-	ID    string
+	Title    string
+	Link     string
+	Price    string
+	Location string
+	ID       string
 }
 
 // GetAds gets the ads for the specified page serachterm citycode and radius
@@ -40,6 +42,11 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 				link := e.DOM.Find("a[class=ellipsis]")
 				linkURL, _ := link.Attr("href")
 				price := strings.TrimSpace(e.DOM.Find("p[class=aditem-main--middle--price-shipping--price]").Text())
+
+				space := regexp.MustCompile(`\s+`)
+				location := strings.TrimSpace(e.DOM.Find("div [class=aditem-main--top--left]").Last().Text())
+
+				location = space.ReplaceAllString(location, " ")
 
 				if maxPrice != nil && strings.ToLower(price) != "zu verschenken" {
 					replacted := strings.Trim(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.Trim(price, " "), "VB", ""), "€", ""), ".", ""), " ")
@@ -70,7 +77,7 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 				//details := e.DOM.Find("div[class=aditem-details]")
 				title := link.Text()
 				if idExsits {
-					ads = append(ads, Ad{Title: title, Link: "https://www.ebay-kleinanzeigen.de" + linkURL, ID: id, Price: price})
+					ads = append(ads, Ad{Title: title, Link: "https://www.ebay-kleinanzeigen.de" + linkURL, ID: id, Price: price, Location: location})
 				}
 			}
 		})
