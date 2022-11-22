@@ -29,6 +29,8 @@ func main() {
 	if *debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).With().Caller().Logger().With().Timestamp().Logger()
+	} else {
+		log.Logger = log.With().Caller().Logger().With().Timestamp().Logger()
 	}
 
 	token = os.Getenv("TELEGRAM_APITOKEN")
