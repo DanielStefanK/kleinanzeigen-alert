@@ -90,7 +90,7 @@ func (b *Bot) Start() {
 						msg = "Um eine Suche hinzuzufügen schreibe <code>/add {Suchbegriff}, {Stadt/PLZ}, {Radius}, {Max Preis ohne \"€\", \",\",\".\"}, {Min Preis ohne \"€\", \",\",\".\"}?</code>"
 					} else {
 						msg = fmt.Sprintf("Suche für <b>%s</b> in <b>%s</b> hinzugefügt. ID: <b>%d</b>", q.Term, q.CityName, q.ID)
-						log.Debug().
+						log.Info().
 							Str("telegram_username", update.Message.Chat.UserName).
 							Str("term", q.Term).
 							Str("city", q.CityName).
