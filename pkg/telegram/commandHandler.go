@@ -190,7 +190,7 @@ func (b *Bot) sendMsg(msg string, raw string, chatID int64) error {
 		}
 
 		if strings.HasPrefix(err.Error(), "Bad Request: can't parse entities") {
-			log.Info().Msg("msg has invalid html. trying to send raw data.")
+			log.Info().Str("msg", telegramMessage.Text).Msg("msg has invalid html. trying to send raw data.")
 			telegramMessage := tgbotapi.NewMessage(chatID, raw)
 
 			_, err := b.internalBot.Send(telegramMessage)
