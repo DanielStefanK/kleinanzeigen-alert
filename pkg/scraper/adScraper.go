@@ -34,7 +34,9 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 	log.Debug().Msg("scraping for ads")
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 	ads := make([]Ad, 0, 0)
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.UserAgent("telegram-alert-bot/1.0"),
+	)
 
 	c.OnHTML("#srchrslt-adtable", func(adListEl *colly.HTMLElement) {
 		adListEl.ForEach(".ad-listitem", func(_ int, e *colly.HTMLElement) {
