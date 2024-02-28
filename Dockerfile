@@ -1,4 +1,4 @@
-FROM golang:alpine
+FROM golang:1.13-alpine
 RUN apk update && apk add --no-cache git gcc musl-dev
 ADD . /go/src/github.com/danielstefank/kleinanzeigen-alert/
 WORKDIR /go/src/github.com/danielstefank/kleinanzeigen-alert/
