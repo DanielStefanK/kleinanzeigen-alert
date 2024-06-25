@@ -184,6 +184,10 @@ func (b *Bot) SendAds(chatID int64, ads []scraper.Ad, q model.Query) error {
 	return nil
 }
 
+func (b *Bot) SendMsg(chatID int64, msg string) error {
+	return b.sendMsg(msg, msg, chatID)
+}
+
 func (b *Bot) sendQueries(chatID int64, queries []model.Query) {
 	if len(queries) == 0 {
 		b.sendMsg(

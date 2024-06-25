@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 )
 
 var token string
+
+var f = fmt.Sprintf
 
 const fetchDuration = time.Second * 60
 
@@ -69,9 +72,26 @@ func main() {
 		log.Info().Int("number_of_queries", len(queries)).Msg("fetching ads")
 		for _, q := range queries {
 			go func(query model.Query) {
-				new := s.GetLatest(query.ID)
+				new, err := s.GetLatest(query.ID)
+
+				if err != nil {
+					if query.FailedPreviously {
+						s.RemoveByID(query.ID, query.ChatID)
+						bot.SendMsg(query.ChatID, f("Anzeigen für %s (ID: %d) konnten nicht geladen werden. Das Problem ist erneut aufgetreten. Die Query wurde gelöscht.", query.Term, query.ID))
+					} else {
+						bot.SendMsg(query.ChatID, f("Anzeigen konnten für %s (ID: %d) nicht geladen werden. Falls das Problem weiterhin besteht, wird die Query gelöscht. Der Bot könnte überlastet sein, oder die Query enthält Fehler.", query.Term, query.ID))
+						query.FailedPreviously = true
+						s.UpdateQuery(query.ID, true)
+					}
+					return
+				}
+
+				if query.FailedPreviously {
+					s.UpdateQuery(query.ID, false)
+				}
+
 				log.Debug().Int("number_of_new_ads", len(new)).Msg("new ads found")
-				err := bot.SendAds(query.ChatID, new, query)
+				err = bot.SendAds(query.ChatID, new, query)
 				if err != nil {
 					affected, err := s.RemoveByChatID(query.ChatID)
 					if err != nil {

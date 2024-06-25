@@ -62,7 +62,12 @@ func (s *Storage) AddNewQuery(term string, city string, radius int, price *int, 
 		return nil, errors.New("could not create query")
 	}
 
-	latestAds := scraper.GetAds(1, term, cityID, radius, price, minPrice, nil)
+	latestAds, err := scraper.GetAds(1, term, cityID, radius, price, minPrice, nil)
+
+	if err != nil {
+		return nil, errors.New("could not get latest ads")
+	}
+
 	err = s.storeLatestAds(latestAds, query.ID)
 
 	if err != nil {
@@ -86,7 +91,10 @@ func (s *Storage) AddNewQueryViaLink(link string, chatID int64) (*model.Query, e
 		return nil, errors.New("could not create query")
 	}
 
-	latestAds := scraper.GetAds(1, "", 0, 0, nil, nil, &link)
+	latestAds, err := scraper.GetAds(1, "", 0, 0, nil, nil, &link)
+	if err != nil {
+		return nil, errors.New("could not get latest ads")
+	}
 	err = s.storeLatestAds(latestAds, query.ID)
 
 	if err != nil {
@@ -149,6 +157,17 @@ func (s *Storage) RemoveByID(id uint, chatID int64) *model.Query {
 	return q
 }
 
+// SetFailedState sets the failed state of a query
+func (s *Storage) UpdateQuery(id uint, state bool) *model.Query {
+	q := s.FindQueryByID(id)
+
+	q.FailedPreviously = state
+
+	s.db.Save(q)
+
+	return q
+}
+
 // RemoveByChatID removes all queries for a chat id
 func (s *Storage) RemoveByChatID(chatID int64) (int, error) {
 	trx := s.db.Where(&model.Query{ChatID: chatID}).Delete(&model.Query{})
@@ -157,18 +176,23 @@ func (s *Storage) RemoveByChatID(chatID int64) (int, error) {
 }
 
 // GetLatest fetches the latest ads from kleinanzeigen. All ads where the id is not in the db is returned and the db is updated with the latest ads
-func (s *Storage) GetLatest(id uint) []scraper.Ad {
+func (s *Storage) GetLatest(id uint) ([]scraper.Ad, error) {
 	q := s.FindQueryByID(id)
 
 	if q == nil {
-		return make([]scraper.Ad, 0, 0)
+		return make([]scraper.Ad, 0, 0), nil
 	}
 
-	latest := scraper.GetAds(1, q.Term, q.City, q.Radius, q.MaxPrice, q.MinPrice, q.CustomLink)
+	latest, err := scraper.GetAds(1, q.Term, q.City, q.Radius, q.MaxPrice, q.MinPrice, q.CustomLink)
+
+	if err != nil {
+		return nil, errors.New("could not get latest ads")
+	}
+
 	diff := s.findDiff(latest, q.ID)
 
 	s.storeLatestAds(diff, q.ID)
-	return diff
+	return diff, nil
 }
 
 // DeleteOlderAds deletes all ads older that 7 days

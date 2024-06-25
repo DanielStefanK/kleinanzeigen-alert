@@ -30,7 +30,7 @@ type Ad struct {
 }
 
 // GetAds gets the ads for the specified page serachterm citycode and radius
-func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minPrice *int, customLink *string) []Ad {
+func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minPrice *int, customLink *string) ([]Ad, error) {
 	log.Debug().Msg("scraping for ads")
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
 
@@ -89,9 +89,15 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 			}
 		})
 	})
+
+	var err error
 	c.OnError(func(r *colly.Response, e error) {
 		log.Error().Err(e).Str("term", term).Int("radius", radius).Msg("error while scraping for ads")
+		if e.Error() == "Forbidden" {
+			err = errors.New("Forbidden")
+		}
 	})
+	err = errors.New("Forbidden")
 
 	c.Visit(query)
 
@@ -99,7 +105,7 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 
 	log.Debug().Str("query", term).Int("number_of_queries", len(ads)).Msg("scraped ads for query")
 
-	return ads
+	return ads, err
 }
 
 // FindCityID finds the city by the name/postal code
