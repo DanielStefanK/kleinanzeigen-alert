@@ -37,6 +37,17 @@ func NewStorage() *Storage {
 	return s
 }
 
+func (s *Storage) GetUniqueChatIDs() []int64 {
+	chatIDs := make([]int64, 0, 0)
+	err := s.db.Table("queries").Select("chat_id").Group("chat_id").Pluck("chat_id", &chatIDs).Error
+
+	if err != nil {
+		log.Error().Err(err).Msg("could not get unique chat ids")
+	}
+
+	return chatIDs
+}
+
 // CloseDB closes the created tb connection
 func (s *Storage) CloseDB() {
 	log.Info().Msg("closing database")

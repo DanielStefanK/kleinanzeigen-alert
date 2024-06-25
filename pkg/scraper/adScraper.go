@@ -104,7 +104,11 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 
 	log.Debug().Str("query", term).Int("number_of_queries", len(ads)).Msg("scraped ads for query")
 
-	return ads, err
+	if len(ads) == 0 && err != nil {
+		return ads, err
+	}
+
+	return ads, nil
 }
 
 // FindCityID finds the city by the name/postal code

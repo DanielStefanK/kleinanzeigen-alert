@@ -106,7 +106,7 @@ func (b *Bot) Start() {
 					q, err := b.storage.AddNewQueryViaLink(update.Message.CommandArguments(), update.Message.Chat.ID)
 
 					if err != nil {
-						msg = "Um eine Suche hinzuzufügen via Link hinzuzufügen nutze <code>/add {link}</code> mit einem validen Link"
+						msg = "Um eine Suche via Link hinzuzufügen nutze <code>/add {link}</code> mit einem validen Link"
 					} else {
 						msg = fmt.Sprintf("Linksuche für <b>%s</b> hinzugefügt. ID: <b>%d</b>", *q.CustomLink, q.ID)
 						log.Info().
