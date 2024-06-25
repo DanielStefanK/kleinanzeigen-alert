@@ -2,7 +2,7 @@
 
 
 Telegram bot that notifies you of new Kleinanzeigen listings.
-You can try my hosted version at [@AlertAlertAlert_bot](https://t.me/AlertAlertAlert_bot) or run it yourself with the instructions below.
+Run it yourself with the instructions below.
 
 
 ## Installation
