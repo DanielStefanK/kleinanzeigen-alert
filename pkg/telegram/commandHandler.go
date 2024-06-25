@@ -100,6 +100,23 @@ func (b *Bot) Start() {
 
 					b.sendMsgRaw(msg, update.Message.Chat.ID)
 				}()
+			case "link":
+				go func() {
+					msg := "success"
+					q, err := b.storage.AddNewQueryViaLink(update.Message.CommandArguments(), update.Message.Chat.ID)
+
+					if err != nil {
+						msg = "Um eine Suche hinzuzufügen via Link hinzuzufügen nutze <code>/add {link}</code> mit einem validen Link"
+					} else {
+						msg = fmt.Sprintf("Linksuche für <b>%s</b> hinzugefügt. ID: <b>%d</b>", *q.CustomLink, q.ID)
+						log.Info().
+							Str("telegram_username", update.Message.Chat.UserName).
+							Str("link", *q.CustomLink).
+							Msg("added new query.")
+					}
+
+					b.sendMsgRaw(msg, update.Message.Chat.ID)
+				}()
 			case "remove":
 				go func() {
 					msg := "success"
@@ -117,7 +134,13 @@ func (b *Bot) Start() {
 							if removedQ == nil {
 								msg = "Suche nicht gefunden."
 							} else {
-								msg = fmt.Sprintf("Suche für %s entfernt", removedQ.Term)
+								term := removedQ.Term
+
+								if removedQ.CustomLink != nil {
+									term = "Link"
+								}
+
+								msg = fmt.Sprintf("Suche für %s entfernt", term)
 								log.Debug().
 									Str("telegram_username", update.Message.Chat.UserName).
 									Str("term", removedQ.Term).
@@ -147,7 +170,13 @@ func (b *Bot) Start() {
 // SendAds send the given ad the the given chatId
 func (b *Bot) SendAds(chatID int64, ads []scraper.Ad, q model.Query) error {
 	for _, ad := range ads {
-		err := b.sendMsg(formatAd(ad, q.Term, int(q.ID)), formatAdRaw(ad, q.Term, int(q.ID)), chatID)
+		term := q.Term
+
+		if q.CustomLink != nil {
+			term = "Link"
+		}
+
+		err := b.sendMsg(formatAd(ad, term, int(q.ID)), formatAdRaw(ad, term, int(q.ID)), chatID)
 		if err != nil {
 			return err
 		}
@@ -207,17 +236,22 @@ func (b *Bot) sendMsg(msg string, raw string, chatID int64) error {
 func formatQuery(q model.Query) string {
 	var b strings.Builder
 	f := fmt.Sprintf
-	b.WriteString(f("Suchbegriff: <b>%s</b>\n", q.Term))
-	b.WriteString(f("Radius: <b>%v km</b>\n", q.Radius))
-	b.WriteString(f("Stadt: <b>%s</b>\n", q.CityName))
-	b.WriteString(f("ID: <b>%v</b>", q.ID))
+	if q.CustomLink != nil {
+		b.WriteString(f("Link: %s\n", *q.CustomLink))
+		b.WriteString(f("ID: <b>%v</b>", q.ID))
+	} else {
+		b.WriteString(f("Suchbegriff: <b>%s</b>\n", q.Term))
+		b.WriteString(f("Radius: <b>%v km</b>\n", q.Radius))
+		b.WriteString(f("Stadt: <b>%s</b>\n", q.CityName))
+		b.WriteString(f("ID: <b>%v</b>", q.ID))
 
-	if q.MaxPrice != nil {
-		b.WriteString(f("\nMax Preis: <b>%v €</b>", *q.MaxPrice))
-	}
+		if q.MaxPrice != nil {
+			b.WriteString(f("\nMax Preis: <b>%v €</b>", *q.MaxPrice))
+		}
 
-	if q.MinPrice != nil {
-		b.WriteString(f("\nMin Preis: <b>%v €</b>", *q.MinPrice))
+		if q.MinPrice != nil {
+			b.WriteString(f("\nMin Preis: <b>%v €</b>", *q.MinPrice))
+		}
 	}
 
 	return b.String()
@@ -226,17 +260,22 @@ func formatQuery(q model.Query) string {
 func formatQueryRaw(q model.Query) string {
 	var b strings.Builder
 	f := fmt.Sprintf
-	b.WriteString(f("Suchbegriff: %s\n", q.Term))
-	b.WriteString(f("Radius: %v km\n", q.Radius))
-	b.WriteString(f("Stadt: %s\n", q.CityName))
-	b.WriteString(f("ID: %v", q.ID))
 
-	if q.MaxPrice != nil {
-		b.WriteString(f("Max Preis: %v €", q.MaxPrice))
-	}
+	if q.CustomLink != nil {
+		b.WriteString(f("Link: %s\n", *q.CustomLink))
+		b.WriteString(f("ID: %v", q.ID))
+	} else {
+		b.WriteString(f("Suchbegriff: %s\n", q.Term))
+		b.WriteString(f("Radius: %v km\n", q.Radius))
+		b.WriteString(f("Stadt: %s\n", q.CityName))
 
-	if q.MinPrice != nil {
-		b.WriteString(f("Max Preis: %v €", q.MinPrice))
+		if q.MaxPrice != nil {
+			b.WriteString(f("Max Preis: %v €", q.MaxPrice))
+		}
+
+		if q.MinPrice != nil {
+			b.WriteString(f("Max Preis: %v €", q.MinPrice))
+		}
 	}
 
 	return b.String()
@@ -267,7 +306,7 @@ func formatAdRaw(ad scraper.Ad, term string, id int) string {
 func getQueryFromArgs(args string, chatID int64, s *storage.Storage) (*model.Query, bool) {
 	arr := strings.SplitN(args, ",", -1)
 
-	if len(arr) < 2 || len(arr) > 5 {
+	if len(arr) < 3 || len(arr) > 5 {
 		return nil, false
 	}
 

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var cityUrl = "https://www.ebay-kleinanzeigen.de/s-ort-empfehlungen.json?query=%s"
+var cityUrl = "https://www.kleinanzeigen.de/s-ort-empfehlungen.json?query=%s"
 
 func main() {
 	city := "Bochum"

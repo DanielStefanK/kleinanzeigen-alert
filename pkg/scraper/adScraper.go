@@ -16,9 +16,9 @@ import (
 	"github.com/gocolly/colly"
 )
 
-const url = "https://www.ebay-kleinanzeigen.de/seite:%v/s-%s/k0l%vr%v"
+const url = "https://www.kleinanzeigen.de/seite:%v/s-%s/k0l%vr%v"
 
-const cityURL = "https://www.ebay-kleinanzeigen.de/s-ort-empfehlungen.json?query=%s"
+const cityURL = "https://www.kleinanzeigen.de/s-ort-empfehlungen.json?query=%s"
 
 // Ad is a representation of the kleinanzeigen ads
 type Ad struct {
@@ -30,9 +30,14 @@ type Ad struct {
 }
 
 // GetAds gets the ads for the specified page serachterm citycode and radius
-func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minPrice *int) []Ad {
+func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minPrice *int, customLink *string) []Ad {
 	log.Debug().Msg("scraping for ads")
 	query := fmt.Sprintf(url, page, strings.ReplaceAll(term, " ", "-"), cityCode, radius)
+
+	if (customLink != nil) && CheckUrl(*customLink) {
+		query = *customLink
+	}
+
 	ads := make([]Ad, 0, 0)
 	c := colly.NewCollector(
 		colly.UserAgent("telegram-alert-bot/1.0"),
@@ -79,7 +84,7 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 				//details := e.DOM.Find("div[class=aditem-details]")
 				title := link.Text()
 				if idExsits {
-					ads = append(ads, Ad{Title: title, Link: "https://www.ebay-kleinanzeigen.de" + linkURL, ID: id, Price: price, Location: location})
+					ads = append(ads, Ad{Title: title, Link: "https://www.kleinanzeigen.de" + linkURL, ID: id, Price: price, Location: location})
 				}
 			}
 		})
@@ -165,4 +170,13 @@ func FindCityID(untrimmed string) (int, string, error) {
 	}
 
 	return 0, "", errors.New("no city id found")
+}
+
+// CheckUrl checks if a url is valid
+func CheckUrl(untrimmed string) bool {
+	url := strings.Trim(untrimmed, " ")
+
+	var urlRegex = regexp.MustCompile(`https://www.kleinanzeigen.de/s-[^? ]+`)
+
+	return urlRegex.Match([]byte(url))
 }

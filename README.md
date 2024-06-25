@@ -1,7 +1,7 @@
 # Kleinanzeigen-alert
 
 
-Telegram bot that notifies you of new Ebay-Kleinanzeigen listings.
+Telegram bot that notifies you of new Kleinanzeigen listings.
 You can try my hosted version at [@AlertAlertAlert_bot](https://t.me/AlertAlertAlert_bot) or run it yourself with the instructions below.
 
 
@@ -38,6 +38,12 @@ This will list all your current searches
 ### Remove searches
 write `/remove {ID}`
 You get the ID from the list command. This will delete the search and you will no longer receive messages for it.
+
+
+
+### Add Custom Link
+write `/link {Link}`
+You can also provide a custom link for the bot to scrape. This link is validated to be something like `https://www.kleinanzeigen.de/s-XXXX`.
 
 
 ## Author

@@ -37,7 +37,7 @@ func NewStorage() *Storage {
 	return s
 }
 
-//CloseDB closes the created tb connection
+// CloseDB closes the created tb connection
 func (s *Storage) CloseDB() {
 	log.Info().Msg("closing database")
 	s.db.Close()
@@ -62,7 +62,31 @@ func (s *Storage) AddNewQuery(term string, city string, radius int, price *int, 
 		return nil, errors.New("could not create query")
 	}
 
-	latestAds := scraper.GetAds(1, term, cityID, radius, price, minPrice)
+	latestAds := scraper.GetAds(1, term, cityID, radius, price, minPrice, nil)
+	err = s.storeLatestAds(latestAds, query.ID)
+
+	if err != nil {
+		log.Error().Err(err).Msg("could not store latest ads")
+		return nil, errors.New("could not store latest ads")
+	}
+
+	return &query, nil
+}
+
+func (s *Storage) AddNewQueryViaLink(link string, chatID int64) (*model.Query, error) {
+	if link == "" || !scraper.CheckUrl(link) {
+		return nil, errors.New("invalid link")
+	}
+
+	query := model.Query{ChatID: chatID, CustomLink: &link}
+	err := s.db.Create(&query).Error
+
+	if err != nil {
+		log.Error().Err(err).Msg("could not create query")
+		return nil, errors.New("could not create query")
+	}
+
+	latestAds := scraper.GetAds(1, "", 0, 0, nil, nil, &link)
 	err = s.storeLatestAds(latestAds, query.ID)
 
 	if err != nil {
@@ -132,7 +156,7 @@ func (s *Storage) RemoveByChatID(chatID int64) (int, error) {
 	return int(trx.RowsAffected), trx.Error
 }
 
-//GetLatest fetches the latest ads from kleinanzeigen. All ads where the id is not in the db is returned and the db is updated with the latest ads
+// GetLatest fetches the latest ads from kleinanzeigen. All ads where the id is not in the db is returned and the db is updated with the latest ads
 func (s *Storage) GetLatest(id uint) []scraper.Ad {
 	q := s.FindQueryByID(id)
 
@@ -140,7 +164,7 @@ func (s *Storage) GetLatest(id uint) []scraper.Ad {
 		return make([]scraper.Ad, 0, 0)
 	}
 
-	latest := scraper.GetAds(1, q.Term, q.City, q.Radius, q.MaxPrice, q.MinPrice)
+	latest := scraper.GetAds(1, q.Term, q.City, q.Radius, q.MaxPrice, q.MinPrice, q.CustomLink)
 	diff := s.findDiff(latest, q.ID)
 
 	s.storeLatestAds(diff, q.ID)

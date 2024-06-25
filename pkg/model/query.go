@@ -7,14 +7,15 @@ import (
 // Query that is beeing sored
 type Query struct {
 	gorm.Model
-	ChatID   int64 `gorm:"index:chatid"`
-	LastAds  []Ad
-	Term     string `gorm:"type:varchar(100)"`
-	Radius   int
-	City     int
-	CityName string `gorm:"type:varchar(100)"`
-	MaxPrice *int
-	MinPrice *int
+	ChatID     int64 `gorm:"index:chatid"`
+	LastAds    []Ad
+	Term       string `gorm:"type:varchar(100)"`
+	Radius     int
+	City       int
+	CityName   string `gorm:"type:varchar(100)"`
+	MaxPrice   *int
+	MinPrice   *int
+	CustomLink *string `gorm:"type:varchar(1000)"`
 }
 
 // AfterDelete delete all assiciated ads
