@@ -97,7 +97,6 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 			err = errors.New("Forbidden")
 		}
 	})
-	err = errors.New("Forbidden")
 
 	c.Visit(query)
 
