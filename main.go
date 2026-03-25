@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -18,6 +20,22 @@ import (
 var token string
 
 var f = fmt.Sprintf
+
+func parseAllowedChatIDs(raw string) []int64 {
+	if raw == "" {
+		return nil
+	}
+	var ids []int64
+	for _, part := range strings.Split(raw, ",") {
+		id, err := strconv.ParseInt(strings.TrimSpace(part), 10, 64)
+		if err != nil {
+			log.Warn().Str("value", part).Msg("invalid chat ID in ALLOWED_CHAT_IDS, skipping")
+			continue
+		}
+		ids = append(ids, id)
+	}
+	return ids
+}
 
 const fetchDuration = time.Second * 60
 
@@ -43,9 +61,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	allowedChatIDs := parseAllowedChatIDs(os.Getenv("ALLOWED_CHAT_IDS"))
+	if len(allowedChatIDs) > 0 {
+		log.Info().Int("count", len(allowedChatIDs)).Msg("access restricted to specific chat IDs")
+	} else {
+		log.Info().Msg("no ALLOWED_CHAT_IDS set — bot is open to everyone")
+	}
+
 	s := storage.NewStorage()
 	defer s.CloseDB()
-	bot := telegram.CreateBot(token, s)
+	bot := telegram.CreateBot(token, s, allowedChatIDs)
 	bot.Init()
 	go bot.Start()
 

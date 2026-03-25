@@ -19,17 +19,30 @@ import (
 
 // Bot will store the token the internal telegram bto and the storage
 type Bot struct {
-	token       string
-	internalBot *tgbotapi.BotAPI
-	storage     *storage.Storage
+	token          string
+	internalBot    *tgbotapi.BotAPI
+	storage        *storage.Storage
+	allowedChatIDs map[int64]bool
 }
 
-// CreateBot will create a new bot with the given token and storage
-func CreateBot(token string, storage *storage.Storage) *Bot {
+// CreateBot will create a new bot with the given token and storage.
+// allowedChatIDs restricts access to specific chat IDs; pass nil or an empty map to allow everyone.
+func CreateBot(token string, storage *storage.Storage, allowedChatIDs []int64) *Bot {
 	bot := new(Bot)
 	bot.token = token
 	bot.storage = storage
+	bot.allowedChatIDs = make(map[int64]bool, len(allowedChatIDs))
+	for _, id := range allowedChatIDs {
+		bot.allowedChatIDs[id] = true
+	}
 	return bot
+}
+
+func (b *Bot) isAllowed(chatID int64) bool {
+	if len(b.allowedChatIDs) == 0 {
+		return true
+	}
+	return b.allowedChatIDs[chatID]
 }
 
 // Init will create the internal bot
@@ -62,6 +75,16 @@ func (b *Bot) Start() {
 		for update := range updates {
 
 			if update.Message == nil { // ignore any non-Message updates
+				continue
+			}
+
+			if !b.isAllowed(update.Message.Chat.ID) {
+				log.Info().
+					Int64("chat_id", update.Message.Chat.ID).
+					Str("telegram_username", update.Message.Chat.UserName).
+					Msg("rejected message from unauthorized chat ID")
+				b.sendMsgRaw("Du bist nicht berechtigt, diesen Bot zu verwenden.", update.Message.Chat.ID)
+				lastUpdateID = update.UpdateID
 				continue
 			}
 
