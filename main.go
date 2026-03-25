@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/model"
-
+	"github.com/danielstefank/kleinanzeigen-alert/pkg/scraper"
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/storage"
 	"github.com/danielstefank/kleinanzeigen-alert/pkg/telegram"
 )
@@ -91,6 +91,9 @@ func main() {
 				}
 
 				log.Debug().Int("number_of_new_ads", len(new)).Msg("new ads found")
+				for i := range new {
+					new[i].SellerMemberSince = scraper.GetSellerMemberSince(new[i].Link)
+				}
 				err = bot.SendAds(query.ChatID, new, query)
 				if err != nil {
 					affected, err := s.RemoveByChatID(query.ChatID)

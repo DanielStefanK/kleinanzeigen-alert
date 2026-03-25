@@ -22,11 +22,39 @@ const cityURL = "https://www.kleinanzeigen.de/s-ort-empfehlungen.json?query=%s"
 
 // Ad is a representation of the kleinanzeigen ads
 type Ad struct {
-	Title    string
-	Link     string
-	Price    string
-	Location string
-	ID       string
+	Title             string
+	Link              string
+	Price             string
+	Location          string
+	ID                string
+	SellerMemberSince string
+}
+
+// GetSellerMemberSince fetches the ad detail page and extracts the seller's member since date
+func GetSellerMemberSince(adURL string) string {
+	var memberSince string
+
+	c := colly.NewCollector(
+		colly.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:74.0) Gecko/20100101 Firefox/74.0"),
+	)
+
+	c.OnHTML("#viewad-contact", func(e *colly.HTMLElement) {
+		e.ForEach("li", func(_ int, li *colly.HTMLElement) {
+			text := strings.TrimSpace(li.Text)
+			if strings.Contains(text, "Aktiv seit") {
+				memberSince = strings.TrimSpace(strings.ReplaceAll(text, "Aktiv seit", ""))
+			}
+		})
+	})
+
+	c.OnError(func(r *colly.Response, e error) {
+		log.Debug().Err(e).Str("url", adURL).Msg("error fetching ad detail page for seller info")
+	})
+
+	c.Visit(adURL)
+	c.Wait()
+
+	return memberSince
 }
 
 // GetAds gets the ads for the specified page serachterm citycode and radius
