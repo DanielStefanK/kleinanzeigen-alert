@@ -22,11 +22,12 @@ const cityURL = "https://www.kleinanzeigen.de/s-ort-empfehlungen.json?query=%s"
 
 // Ad is a representation of the kleinanzeigen ads
 type Ad struct {
-	Title    string
-	Link     string
-	Price    string
-	Location string
-	ID       string
+	Title        string
+	Link         string
+	Price        string
+	Location     string
+	ID           string
+	ActiveSince  string // "Aktiv seit" date from seller profile
 }
 
 // GetAds gets the ads for the specified page serachterm citycode and radius
@@ -84,7 +85,10 @@ func GetAds(page int, term string, cityCode int, radius int, maxPrice *int, minP
 				//details := e.DOM.Find("div[class=aditem-details]")
 				title := link.Text()
 				if idExsits {
-					ads = append(ads, Ad{Title: title, Link: "https://www.kleinanzeigen.de" + linkURL, ID: id, Price: price, Location: location})
+					ad := Ad{Title: title, Link: "https://www.kleinanzeigen.de" + linkURL, ID: id, Price: price, Location: location}
+					// Extract "Aktiv seit" information from the ad page
+					ad.ActiveSince = extractActiveSince(ad.Link)
+					ads = append(ads, ad)
 				}
 			}
 		})
@@ -188,4 +192,32 @@ func CheckUrl(untrimmed string) bool {
 	var urlRegex = regexp.MustCompile(`https://www.kleinanzeigen.de/s-[^? ]+`)
 
 	return urlRegex.Match([]byte(url))
+}
+
+// extractActiveSince extracts the "Aktiv seit" date from an ad page
+func extractActiveSince(adLink string) string {
+	var activeSince string
+
+	c := colly.NewCollector(
+		colly.UserAgent("telegram-alert-bot/1.0"),
+	)
+
+	c.OnHTML("span.userprofile-vip-details-text", func(e *colly.HTMLElement) {
+		text := strings.TrimSpace(e.Text)
+		if strings.Contains(text, "Aktiv seit") {
+			activeSince = text
+		}
+	})
+
+	c.OnError(func(_ *colly.Response, err error) {
+		log.Debug().Err(err).Str("link", adLink).Msg("error while extracting active since date")
+	})
+
+	c.Visit(adLink)
+
+	if activeSince == "" {
+		log.Debug().Str("ad_link", adLink).Msg("could not find 'Aktiv seit' information")
+	}
+
+	return activeSince
 }

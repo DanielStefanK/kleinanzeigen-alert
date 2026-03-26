@@ -3,5 +3,5 @@ services:
   kleinanzeigen:
     build: .
     environment:
-      - TELEGRAM_APITOKEN=myToken
+      - TELEGRAM_APITOKEN=xyz123
     restart: always
